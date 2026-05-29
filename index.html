@@ -1,0 +1,2309 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>課堂互動系統 v5.6 (Pro Educator Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#1e293b', 900: '#0f172a' },
+              oriental: { red: '#b91c1c', blue: '#1e3a8a', green: '#065f46', gold: '#b45309', paper: '#fdfbf7' },
+            },
+            fontFamily: { sans: ['"Noto Sans TC"', 'sans-serif'], serif: ['"Noto Serif TC"', 'serif'] },
+            boxShadow: { 'premium': '0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05)' }
+          }
+        }
+      }
+    </script>
+    <style>
+      [v-cloak] { display: none !important; }
+      body { font-family:'Noto Sans TC',sans-serif; background-color:#fdfbf7; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E"); overflow:hidden; position:fixed; inset:0; color:#334155; }
+      ::-webkit-scrollbar{width:6px;height:6px}
+      ::-webkit-scrollbar-track{background:transparent}
+      ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px}
+      .thick-scrollbar::-webkit-scrollbar{width:14px}
+      .thick-scrollbar::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:8px;border:3px solid #fdfbf7}
+      .hide-scrollbar::-webkit-scrollbar{display:none;}
+      .hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+      
+      /* 統一按鍵風格 */
+      .toolbar-btn {
+        display: flex; align-items: center; justify-content: center;
+        padding: 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: all 0.2s;
+        border: 1px solid #e2e8f0; background-color: #ffffff; color: #475569;
+        flex-shrink: 0;
+      }
+      .toolbar-btn:hover { background-color: #f8fafc; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+      .toolbar-btn:active { transform: scale(0.95); }
+      @media (min-width: 768px) { .toolbar-btn { padding-left: 0.75rem; padding-right: 0.75rem; } }
+
+      .nav-item-active{background-color:#fff;color:#1e293b;font-weight:700;box-shadow:0 4px 6px -1px rgb(0 0 0/0.1);border-left:4px solid #b91c1c}
+      .btn-hover-effect{transition:all 0.2s}
+      .btn-hover-effect:active{transform:scale(0.95)}
+      .chinese-seal{background-color:#b91c1c;color:#fff;border:1.5px solid #991b1b;font-family:'Noto Serif TC',serif}
+      .card-enter{animation:fadeInUp 0.4s ease forwards}
+      @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes popIn{0%{transform:scale(0.8);opacity:0}100%{transform:scale(1);opacity:1}}
+      @keyframes scorePopIn{0%{transform:scale(0.3);opacity:0}50%{transform:scale(1.2) rotate(-5deg);opacity:1}100%{transform:scale(1) rotate(-5deg);opacity:1}}
+      @keyframes shake{0%,100%{transform:translateX(0) scale(1.2) rotate(0deg)}10%,30%,50%,70%,90%{transform:translateX(-10px) scale(1.2) rotate(-3deg)}20%,40%,60%,80%{transform:translateX(10px) scale(1.2) rotate(3deg)}}
+      .pop-animation{animation:popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards}
+      .score-animation{animation:scorePopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards}
+      .animate-shake{animation:shake 0.6s cubic-bezier(.36,.07,.19,.97) both}
+      .chat-bubble{max-width:85%;background-color:#fff;border-radius:1.5rem 1.5rem 1.5rem 0.25rem;padding:1.25rem 1.75rem;box-shadow:0 4px 12px -2px rgba(0,0,0,0.05);border:1px solid #f1f5f9;cursor:pointer;position:relative;transition:all 0.2s}
+      .chat-bubble:hover{border-color:#b91c1c;transform:translateX(5px)}
+      .heatmap-char{display:inline-block;padding:8px 4px;margin:2px;border-radius:6px;cursor:pointer;font-family:'Noto Serif TC',serif;line-height:2.2;user-select:none;touch-action:none;}
+      .heatmap-char:hover{background-color:#f1f5f9}
+      .heatmap-char.selected{color:#b91c1c;font-weight:900;text-decoration:underline;text-decoration-color:#b91c1c;text-decoration-thickness:3px;text-underline-offset:4px;background-color:#fee2e2;}
+      .teacher-heatmap-char{display:inline-block;margin:0 1px;padding:0 2px;border-radius:4px;line-height:2.2;cursor:pointer;position:relative}
+      .teacher-heatmap-char:hover{box-shadow:0 0 0 2px rgba(226,232,240,0.8);z-index:20}
+      .tooltip-pop{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:6px 10px;border-radius:6px;font-size:12px;white-space:nowrap;opacity:0;pointer-events:none;z-index:30}
+      .teacher-heatmap-char:hover .tooltip-pop{opacity:1;bottom:120%}
+      .heatmap-note{color:#dc2626;font-weight:900;cursor:pointer;font-size:0.9em}
+      @keyframes stampIn{0%{opacity:0;transform:scale(3) rotate(-15deg)}80%{opacity:1;transform:scale(0.9) rotate(-3deg)}100%{opacity:1;transform:scale(1) rotate(-5deg)}}
+      .stamp-animation{animation:stampIn 0.4s forwards}
+      .toast-enter-active,.toast-leave-active{transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)}
+      .toast-enter-from,.toast-leave-to{opacity:0;transform:translateX(50px)}
+      .text-size-normal{font-size:1.125rem}
+      .text-size-large{font-size:1.5rem}
+      .text-size-xlarge{font-size:1.875rem}
+      .gate-bg{background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%)}
+      .score-btn{transition:all 0.1s;}
+      .score-btn:active{transform:scale(0.85);}
+    </style>
+  </head>
+  <body>
+    <div id="app" v-cloak class="h-[100dvh] w-full flex overflow-hidden text-slate-800 relative">
+
+      <div v-if="isConnected === false && (hasJoined || isTeacher)" class="absolute top-0 left-0 w-full bg-amber-500 text-white text-xs font-bold text-center py-1 z-[999] animate-pulse shadow-md">
+        ⚠️ 網路連線微弱或已斷線，系統正在嘗試重新連線...
+      </div>
+
+      <!-- 重複登入等待室 -->
+      <div v-if="!isTeacher && hasJoined && isWaitingForLogin" class="fixed inset-0 bg-slate-900/95 z-[9999] flex flex-col items-center justify-center p-8 backdrop-blur-xl">
+         <div class="text-7xl mb-6 animate-pulse">⏳</div>
+         <h1 class="text-3xl md:text-5xl font-black text-white font-serif tracking-widest text-center leading-tight">該座號使用中</h1>
+         <p class="text-amber-400 mt-6 font-bold text-lg text-center">已發送審核通知給老師，請稍候...</p>
+         <button @click="cancelPendingLogin" class="mt-8 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold transition-all border border-white/20">取消登入</button>
+      </div>
+
+      <!-- 分屏/子母畫面阻擋警告層 -->
+      <div v-if="!isTeacher && hasJoined && isSplitScreen && !isWaitingForLogin" class="fixed inset-0 bg-slate-900/95 z-[9999] flex flex-col items-center justify-center p-8 backdrop-blur-xl">
+         <div class="text-7xl mb-6 animate-pulse">🛑</div>
+         <h1 class="text-3xl md:text-5xl font-black text-white font-serif tracking-widest text-center leading-tight">請關閉分屏模式<br>並最大化視窗</h1>
+         <p class="text-red-400 mt-6 font-bold text-lg text-center">為了維持良好的課堂專注度，<br>本系統不支援子母畫面或分割視窗作答。</p>
+      </div>
+
+      <!-- 抬頭模式 -->
+      <div v-if="!isTeacher && hasJoined && isHeadsUp && !isSplitScreen && !isWaitingForLogin" class="fixed inset-0 bg-slate-900/95 z-[9999] flex flex-col items-center justify-center p-8 backdrop-blur-xl">
+         <div class="text-7xl mb-6 animate-bounce">👀</div>
+         <h1 class="text-4xl md:text-5xl font-black text-white font-serif tracking-widest text-center">請抬頭看黑板</h1>
+         <p class="text-slate-400 mt-6 font-bold text-lg">老師已暫停了平板互動，請將視線移至講台。</p>
+      </div>
+
+      <!-- 鎖定模式 -->
+      <div v-if="!isTeacher && hasJoined && isIndividuallyLocked && !isSplitScreen && !isWaitingForLogin" class="fixed inset-0 bg-slate-800/95 z-[9998] flex flex-col items-center justify-center p-8 backdrop-blur-md">
+         <div class="text-6xl mb-4">🔇</div>
+         <h1 class="text-3xl font-black text-white font-serif tracking-widest text-center">請專心聽講</h1>
+         <p class="text-red-300 mt-4 font-bold text-base text-center">你的發言權限暫時被老師收回。<br>請保持專注，勿干擾課堂秩序。</p>
+      </div>
+
+      <!-- 加分與扣分動畫特效區 -->
+      <Teleport to="body">
+         <div v-if="showScorePopup" class="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none bg-slate-900/20 backdrop-blur-sm transition-all">
+            <div v-if="scorePopupType === 'increase'" class="text-6xl md:text-8xl font-black text-amber-400 score-animation drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] font-serif">
+               🎉 +{{ scorePopupDelta }} 分！
+            </div>
+            <div v-else class="text-6xl md:text-8xl font-black text-red-600 animate-shake drop-shadow-[0_10px_30px_rgba(220,38,38,0.5)] font-serif">
+               📉 {{ scorePopupDelta }} 分！
+            </div>
+         </div>
+      </Teleport>
+
+      <!-- 自訂確認對話框 -->
+      <Teleport to="body">
+        <div v-if="confirmModal.show" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" @click="confirmModal.show = false">
+          <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl relative text-center pop-animation" @click.stop>
+            <div class="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 mb-3">確認操作</h3>
+            <p class="text-sm font-bold text-slate-500 mb-8 whitespace-pre-wrap">{{ confirmModal.message }}</p>
+            <div class="flex gap-4">
+              <button @click="confirmModal.show = false" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition">取消</button>
+              <button @click="executeConfirm" class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition shadow-md">確定</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- 登入閘門 -->
+      <div v-if="!isTeacher && !hasJoined" class="absolute inset-0 z-[100] gate-bg flex flex-col items-center justify-center p-6 text-white">
+        <div class="max-w-md w-full bg-white/10 backdrop-blur-xl p-10 rounded-[3rem] shadow-2xl border border-white/20 text-center relative overflow-hidden">
+          <div class="w-20 h-20 bg-white text-red-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow font-serif text-3xl font-black">尤</div>
+          <h1 class="text-2xl font-black font-serif tracking-widest mb-2">課堂互動系統</h1>
+          <p class="text-xs text-slate-300 font-bold uppercase tracking-widest mb-10">Student Check-in</p>
+          <div class="space-y-4 text-left">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-2 ml-2">選擇所在班級</label>
+              <select v-model="studentProfile.className" class="w-full bg-white/10 border border-white/20 text-white p-4 rounded-2xl outline-none focus:border-white focus:bg-white/20 transition-all font-bold appearance-none">
+                <option value="" disabled class="text-slate-800">請選擇班級...</option>
+                <option v-for="cls in availableClassesForStudent" :key="cls" :value="cls" class="text-slate-800">{{ cls }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-2 ml-2">選擇座號</label>
+              <select v-model="studentProfile.seat" class="w-full bg-white/10 border border-white/20 text-white p-4 rounded-2xl outline-none focus:border-white focus:bg-white/20 transition-all font-bold appearance-none text-center text-xl">
+                <option value="" disabled class="text-slate-800">請選擇座號...</option>
+                <option v-for="n in dynamicSeatLimit" :key="n" :value="n.toString().padStart(2, '0')" class="text-slate-800">{{ n.toString().padStart(2, '0') }}</option>
+              </select>
+            </div>
+          </div>
+          <button @click="joinClass" class="w-full mt-10 py-5 bg-white text-slate-900 rounded-2xl font-black shadow-xl hover:scale-[1.02] transition-transform text-lg flex items-center justify-center gap-2">
+            進入課堂
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="pointer-events-none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+        <button @click="showAuthModal = true" class="mt-8 text-xs font-bold text-white/40 hover:text-white transition-colors underline underline-offset-4">我是教師 (Teacher Login)</button>
+      </div>
+
+      <!-- 主系統 -->
+      <template v-else>
+        <!-- 教師側欄 -->
+        <aside v-if="isTeacher" class="flex flex-col bg-slate-50/80 backdrop-blur-sm border-r border-slate-200 z-30 transition-all duration-500" :class="[isMobile ? (mobileView === 'list' ? 'w-full absolute inset-0 bg-white z-50' : 'hidden') : 'w-80', isFullScreen ? '-ml-80' : '']">
+          <div class="p-6 flex items-center justify-between flex-shrink-0 border-b border-slate-200/50">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 chinese-seal rounded-md flex items-center justify-center font-black text-xl">尤</div>
+              <div><h1 class="text-lg font-black text-slate-800 tracking-wider font-serif">課堂互動系統</h1><p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Pro Educator</p></div>
+            </div>
+            <button @click="collapseAllFolders" class="px-2 py-1 bg-slate-200/50 rounded text-slate-500 hover:bg-slate-200 hover:text-slate-700 text-[10px] font-bold transition">收合</button>
+          </div>
+          <div class="flex-1 overflow-y-auto px-4 py-2 space-y-4">
+            <div v-if="isLoadingSessions" class="flex flex-col items-center py-20 text-slate-400">
+              <div class="w-6 h-6 border-2 border-slate-300 border-t-red-600 rounded-full animate-spin mb-4"></div>
+              <span class="text-xs font-serif tracking-widest">數據同步中</span>
+            </div>
+            <div v-else>
+              <div v-for="(courses, folder) in groupedSessions" :key="folder" class="mb-4">
+                <div class="flex items-center justify-between mb-1 px-2 py-2 cursor-pointer hover:bg-slate-100 rounded-lg transition-colors group select-none" @click="toggleFolder(folder)">
+                  <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-slate-400 transition-transform pointer-events-none" :class="expandedFolders.has(folder) ? 'rotate-90' : ''"><path d="M9 18l6-6-6-6"/></svg>
+                    <span class="text-base font-black text-slate-700">{{ folder }}</span>
+                  </div>
+                  <div class="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
+                    <!-- 精緻版教室門開關 -->
+                    <button type="button" @click.stop.prevent="toggleClassDoor(folder)" :title="isClassOpen(folder) ? '教室開放中' : '教室已鎖定'" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-300 ease-in-out focus:outline-none shadow-inner ring-1 ring-inset" :class="isClassOpen(folder) ? 'bg-green-500 ring-green-600/20 hover:bg-green-400' : 'bg-slate-300 ring-slate-400/20 hover:bg-slate-200'">
+                        <span class="pointer-events-none absolute left-[2px] flex h-[20px] w-[20px] transform items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out" :class="isClassOpen(folder) ? 'translate-x-[20px]' : 'translate-x-0'">
+                            <svg v-if="isClassOpen(folder)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </span>
+                    </button>
+                    <button type="button" @click.stop.prevent="startEditingFolder(folder)" class="p-1 text-slate-400 hover:text-blue-700"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                    <button type="button" @click.stop.prevent="confirmDeleteProject(folder)" class="p-1 text-slate-400 hover:text-red-700"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pointer-events-none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                  </div>
+                </div>
+                <div v-show="expandedFolders.has(folder)">
+                  <div v-for="(activities, course) in courses" :key="course" class="mb-2">
+                    <div class="flex items-center justify-between px-3 py-2 ml-4 cursor-pointer hover:bg-slate-50 rounded-lg group/course select-none" @click="toggleCourse(folder + '-' + course)">
+                      <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300 transition-transform pointer-events-none" :class="expandedCourses.has(folder + '-' + course) ? 'rotate-90' : ''"><path d="M9 18l6-6-6-6"/></svg>
+                        <span class="text-sm font-bold text-slate-600">{{ course }}</span>
+                      </div>
+                      <button type="button" @click.stop.prevent="confirmDeleteCourse(folder, course)" class="opacity-0 group-hover/course:opacity-100 text-slate-300 hover:text-red-700"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="pointer-events-none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                    </div>
+                    <div v-show="expandedCourses.has(folder + '-' + course)" class="space-y-1 mt-1">
+                      <div v-for="q in activities" :key="q.fullName" :id="'nav-' + safeKey(q.fullName)" @click="selectSession(q.fullName)" tabindex="0" role="button" class="w-[calc(100%-2rem)] ml-8 text-left px-3 py-3 rounded-lg text-sm transition-all flex items-center justify-between group border-l cursor-pointer scroll-mt-20" :class="[currentSession === q.fullName ? 'nav-item-active border-l-red-600' : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50 text-slate-500']">
+                        <span class="truncate pr-2">{{ q.shortName }}</span>
+                        <div class="flex items-center gap-2">
+                          <button type="button" @click.stop.prevent="openEditActivityModal(q)" class="p-2 rounded-lg bg-slate-100/50 hover:bg-slate-200 text-slate-400" title="編輯"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                          <button type="button" @click.stop.prevent="confirmDeleteActivity(q.fullName)" class="p-2 rounded-lg bg-slate-100/50 hover:bg-red-100 text-slate-400 hover:text-red-700 relative z-10" title="刪除"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pointer-events-none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                          <button type="button" @click.stop.prevent="toggleActiveSession(q.fullName)" class="p-2 rounded-lg transition-all" title="啟動/關閉" :class="activeSession === q.fullName ? 'bg-red-100 text-red-700' : 'bg-slate-100/50 text-slate-300 hover:bg-slate-200'">
+                            <svg v-if="activeSession !== q.fullName" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pointer-events-none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 bg-white border-t border-slate-200 flex-shrink-0">
+            <button @click="openCreateModal" class="btn-hover-effect w-full py-3 bg-ink-800 text-white rounded-xl text-xs font-bold shadow-premium flex items-center justify-center gap-2 uppercase tracking-widest">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="pointer-events-none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              建立新活動
+            </button>
+          </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-full relative overflow-hidden transition-all duration-500">
+          <header class="bg-white/80 backdrop-blur-md border-b border-slate-200/60 p-3 md:p-4 flex items-center justify-between z-40 flex-shrink-0 overflow-x-auto hide-scrollbar">
+            <div class="flex items-center gap-2 md:gap-4 flex-1 min-w-0 pr-2">
+              <button v-if="isTeacher && isMobile && mobileView === 'detail'" @click="backToList" class="p-2 -ml-2 mr-1 text-slate-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></button>
+              <button v-if="isTeacher && !isMobile" @click="isFullScreen = !isFullScreen" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+              
+              <div class="flex flex-col flex-1 min-w-0">
+                <span class="text-[10px] font-black text-red-700 uppercase tracking-widest">{{ activeClassName || studentProfile.className || '未選擇班級' }} <span v-if="!isTeacher && studentProfile.seat">| 座號：{{ studentProfile.seat }}</span></span>
+                <h2 class="font-bold text-slate-800 font-serif truncate w-full">{{ sessionConfig?.fullQuestion || getSessionDisplayName(currentSession).short || '等待開始' }}</h2>
+              </div>
+            </div>
+            
+            <div class="flex flex-nowrap items-center gap-1.5 md:gap-2 overflow-x-auto hide-scrollbar scroll-smooth flex-shrink-0 max-w-full">
+              <template v-if="!isTeacher">
+                <div class="flex bg-slate-100 rounded-full p-1 border border-slate-200 flex-shrink-0">
+                  <button @click="changeTextSize('down')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm font-bold text-slate-500 text-sm">A-</button>
+                  <button @click="changeTextSize('up')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm font-bold text-slate-700 text-lg">A+</button>
+                </div>
+                <button @click="leaveClass" class="px-3 py-2 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors underline flex-shrink-0">登出</button>
+              </template>
+              
+              <template v-if="isTeacher">
+                <div v-if="activeClassName" class="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200 shadow-sm mr-1 cursor-pointer transition-colors flex-shrink-0" :class="{'border-red-300 bg-red-50': distractedStudents.length > 0}">
+                  
+                  <button @click="showAttendanceModal = true" class="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all hover:bg-white text-slate-600" title="出缺席名單">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                    <span>{{ onlineSeats.length }}/{{ currentClassSize }}</span>
+                  </button>
+                  <div class="w-px h-4 bg-slate-300"></div>
+
+                  <button @click="showUnsubmittedModal = true" class="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all hover:bg-white text-slate-600" title="查看未作答名單">
+                    <span class="text-slate-400">未答</span>
+                    <span :class="unsubmittedSeats.length > 0 ? 'text-amber-600' : 'text-green-600'">{{ unsubmittedSeats.length }}</span>
+                  </button>
+                  <div class="w-px h-4 bg-slate-300"></div>
+                  
+                  <button @click="openDistractedModal" class="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all relative" :class="distractedStudents.length > 0 ? 'text-red-700 hover:bg-white/50' : 'text-slate-400 hover:bg-white'" title="監控中心">
+                    <span v-if="hasNewDistractions" class="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <span>{{ distractedStudents.length }}</span>
+                  </button>
+                </div>
+
+                <!-- 審核鈴鐺 -->
+                <button v-if="activeClassName && pendingLoginsCount > 0" @click="showPendingModal = true" class="relative flex-shrink-0 flex items-center justify-center p-2 mr-1 bg-amber-100 text-amber-700 rounded-full shadow-sm animate-pulse border border-amber-300 transition-all hover:bg-amber-200" title="待審核登入">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                  <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">{{ pendingLoginsCount }}</span>
+                </button>
+
+                <button v-if="activeClassName" @click="showQR = true" class="toolbar-btn" title="學生入口">📱<span class="hidden lg:inline ml-1">入口</span></button>
+                <button v-if="activeClassName" @click="triggerRandomPick" class="toolbar-btn text-oriental-blue" title="隨機抽籤">🎲<span class="hidden lg:inline ml-1">抽籤</span></button>
+                <button v-if="currentSession" @click="clearSessionData" class="toolbar-btn text-red-600" title="清空作答">🧹<span class="hidden lg:inline ml-1">清空</span></button>
+                <button v-if="activeClassName" @click="showScoreModal = true" class="toolbar-btn text-amber-600" title="計分表">🏆<span class="hidden lg:inline ml-1">計分表</span></button>
+
+                <button v-if="activeClassName" @click="toggleHeadsUpMode" class="toolbar-btn text-base leading-none" :class="isHeadsUp ? 'bg-red-600 text-white border-red-700 hover:bg-red-700' : ''" title="抬頭專注模式">👀</button>
+
+                <button v-if="currentSession" @click="toggleActiveSession(currentSession)" class="flex items-center justify-center gap-1.5 px-3 py-2 md:px-4 md:py-2 rounded-full font-bold shadow-md transition-all flex-shrink-0" :class="activeSession === currentSession ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-800 text-white hover:bg-slate-900'">
+                  <svg v-if="activeSession !== currentSession" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                  <span class="hidden lg:inline text-xs">{{ activeSession === currentSession ? '進行中' : '開啟' }}</span>
+                </button>
+              </template>
+            </div>
+          </header>
+
+          <div v-if="isTeacher && currentSession && teacherRandomPickData && teacherRandomPickData.seat" class="bg-blue-600 text-white p-3 text-center shadow-md z-30 flex items-center justify-center gap-4 animate-in slide-in-from-top flex-shrink-0">
+             <span class="font-bold">🎲 抽中座號：<span class="text-2xl font-black bg-white text-blue-700 px-2 rounded">{{ teacherRandomPickData.seat }}</span></span>
+             <span v-if="!teacherRandomPickData.answer" class="text-sm italic animate-pulse">等待學生作答中...</span>
+             <div v-else class="flex items-center gap-2">
+                <span class="text-sm font-bold bg-blue-800 px-2 py-1 rounded">已作答</span>
+                <button @click="zoomAnswer(teacherRandomPickData.answer, -1, teacherRandomPickData.seat)" class="px-3 py-1 bg-white text-blue-700 text-xs font-black rounded-full hover:scale-105 transition">投影檢視</button>
+             </div>
+             <button @click="clearRandomPick" class="ml-auto px-2 py-1 bg-blue-800 rounded hover:bg-blue-900 text-xs font-bold">✖ 關閉</button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto w-full relative scroll-smooth" id="main-scroll-container">
+            <div class="min-h-full flex flex-col items-center justify-center p-4 md:p-6 pb-20">
+
+              <div v-if="!currentSession" class="text-center p-12 max-w-sm">
+                <div class="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-premium animate-bounce"><svg class="text-red-600" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></div>
+                <h2 class="text-2xl font-black text-slate-800 mb-3 font-serif">靜待活動開啟</h2>
+                <p class="text-slate-400 text-sm font-light">老師一旦開啟活動，這裡將會自動更新。</p>
+              </div>
+
+              <div v-else-if="!isTeacher && currentSession" class="w-full flex flex-col h-full md:h-[80vh] bg-white rounded-[2.5rem] shadow-premium border border-slate-100 overflow-hidden relative" :class="sessionConfig?.type === 'translation' ? 'max-w-4xl' : 'max-w-lg'">
+                
+                <div v-if="showStudentRandomPick" class="absolute inset-0 bg-slate-900/95 z-[150] flex flex-col items-center pt-8 md:pt-10 md:justify-center p-6 backdrop-blur-xl h-full w-full">
+                   <div v-show="!(isRandomPickFocused && isMobile)" class="hidden md:flex w-24 h-24 bg-gradient-to-br from-amber-400 to-oriental-gold text-white rounded-full items-center justify-center mb-6 pop-animation shadow-[0_0_40px_rgba(217,119,6,0.4)] text-5xl flex-shrink-0">🎲</div>
+                   
+                   <div v-show="!(isRandomPickFocused && isMobile)" class="flex items-center gap-3 mb-2 md:mb-4 transition-all flex-shrink-0">
+                      <span class="md:hidden text-3xl pop-animation">🎲</span>
+                      <h3 class="text-3xl md:text-4xl font-black text-white font-serif tracking-widest text-center">你被抽中發言</h3>
+                   </div>
+                   
+                   <p v-show="!(isRandomPickFocused && isMobile)" class="text-amber-400 text-sm md:text-base mb-4 md:mb-8 font-bold tracking-[0.2em] uppercase transition-all flex-shrink-0">請輸入你的想法或答案</p>
+                   
+                   <textarea v-model="studentRandomPickInput" 
+                             @focus="isRandomPickFocused = true"
+                             @blur="isRandomPickFocused = false"
+                             class="w-full max-w-lg flex-1 md:flex-none md:min-h-[220px] p-6 rounded-3xl outline-none font-serif text-xl md:text-2xl resize-none shadow-inner text-slate-800 leading-relaxed placeholder-slate-300 border-4 border-transparent focus:border-amber-500 transition-all shrink-0" 
+                             placeholder="在此輸入..."></textarea>
+                   
+                   <button @click="submitStudentRandomPick" :disabled="!studentRandomPickInput.trim()" class="mt-auto md:mt-8 mb-2 md:mb-12 w-full max-w-lg py-4 md:py-5 bg-gradient-to-r from-amber-500 to-oriental-gold text-white font-black text-lg md:text-xl rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.2)] hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 disabled:from-slate-600 disabled:to-slate-700 disabled:text-slate-400 transition-all flex-shrink-0">送 出 答 案</button>
+                </div>
+
+                <div v-if="showStamp" class="fixed inset-0 flex items-center justify-center z-[200] pointer-events-none bg-white/20 backdrop-blur-[1px]">
+                  <div class="w-48 h-48 border-4 border-red-700 rounded-full flex flex-col items-center justify-center text-red-700 stamp-animation bg-red-50/90 shadow-2xl">
+                    <span class="text-xl font-black font-serif tracking-[0.5em] mb-1">{{ studentProfile.seat }}</span>
+                    <span class="text-4xl font-black font-serif border-y-2 border-red-700 py-2 w-32 text-center">已閱</span>
+                  </div>
+                </div>
+                <div class="text-center p-4 md:p-8 pb-2 flex-shrink-0 z-20 bg-white border-b border-slate-50">
+                  <h2 class="text-xl md:text-2xl font-black text-slate-800 font-serif leading-tight mb-2">{{ sessionConfig?.fullQuestion || getSessionDisplayName(currentSession).question }}</h2>
+                  <div class="h-1 w-12 bg-red-600 mx-auto rounded-full"></div>
+                </div>
+                
+                <div v-if="isSessionLoading" class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div></div>
+                
+                <div v-else-if="!sessionConfig?.allowMultiple && studentHasSubmittedCurrent" class="flex-1 flex flex-col items-center justify-center p-8">
+                  <div class="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-6 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                  <h3 class="text-2xl font-black text-slate-800 mb-2">已完成作答</h3>
+                  <p class="text-sm font-bold text-slate-400 text-center">本活動限制只能作答一次或您已完成所有評分向度，<br>請等待老師切換活動。</p>
+                </div>
+
+                <div v-else class="flex-1 overflow-hidden flex flex-col p-4 md:p-8 pt-2">
+                  <div v-if="sessionConfig?.type === 'vote'" class="flex-1 flex flex-col overflow-hidden">
+                    <div v-if="sessionConfig?.allowMultiple && studentHasSubmittedCurrent" class="text-center text-xs font-bold text-slate-400 mb-2 animate-pulse">💡 如需修改，請直接點選新選項</div>
+                    <div class="flex-1 overflow-y-auto space-y-4 pb-6 px-1 hide-scrollbar">
+                      <button v-for="opt in sessionConfig.options" :key="opt" @click="submitWord(opt)" :disabled="isSubmitting" class="w-full p-6 rounded-2xl border-2 transition-all text-left font-bold text-lg flex justify-between items-center btn-hover-effect disabled:opacity-50" :class="studentSelectedVote === opt ? 'bg-red-700 border-red-700 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-700 hover:border-red-600 hover:bg-white'">
+                        <span class="break-words flex-1 pr-4">{{ opt }}</span>
+                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0" :class="studentSelectedVote === opt ? 'border-white/50 bg-white/20' : 'border-slate-200'">
+                          <svg v-if="studentSelectedVote === opt" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else-if="sessionConfig?.type === 'rating'" class="flex-1 flex flex-col overflow-hidden">
+                    <div v-if="!selectedRatingTarget" class="flex-1 flex flex-col overflow-hidden relative">
+                      <div class="mb-3 text-center border-b border-slate-100 pb-3">
+                         <span class="text-xs font-bold text-slate-500 mr-2">評分進度：</span>
+                         <span class="text-sm font-black text-red-600">{{ currentStudentRatedCount }} / {{ sessionConfig.options.length }}</span>
+                         <p v-if="currentStudentRatedCount === sessionConfig.options.length" class="text-xs text-green-600 font-bold mt-1">✅ 已完成所有評分向度</p>
+                      </div>
+                      <div v-if="sessionConfig?.allowMultiple && studentHasSubmittedCurrent" class="text-center text-xs font-bold text-slate-400 mb-2 animate-pulse">💡 如需修改，請重新點入調整分數</div>
+                      <div class="space-y-3 overflow-y-auto px-1 flex-1 hide-scrollbar">
+                        <button v-for="target in sessionConfig.options" :key="target" @click="selectRatingTarget(target)" class="w-full p-5 rounded-2xl border-2 transition-all flex justify-between items-center bg-slate-50 hover:border-oriental-gold" :class="hasRated(target) ? 'opacity-60 border-slate-200' : ''">
+                           <span class="font-bold text-left break-words pr-2">{{ target }}</span>
+                           <span v-if="hasRated(target)" class="text-xs text-green-600 flex-shrink-0 font-bold flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>已評</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div v-else class="text-center py-6 flex flex-col h-full overflow-hidden">
+                      <button @click="selectedRatingTarget = null" class="mb-auto text-xs font-bold text-slate-400 underline self-start">← 返回列表</button>
+                      <div class="flex-1 w-full overflow-y-auto hide-scrollbar">
+                        <div class="min-h-full flex flex-col items-center justify-center py-4">
+                          <h3 class="text-2xl font-black mb-8">{{ selectedRatingTarget }}</h3>
+                          <div class="flex gap-4 justify-center mb-12">
+                            <svg v-for="n in 5" :key="n" @click="tempRating = n" class="w-12 h-12 cursor-pointer transition-all" :class="n <= tempRating ? 'text-amber-500 fill-current drop-shadow-sm' : 'text-slate-200 fill-current'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                          </div>
+                          <button @click="submitRating" class="btn-hover-effect w-full py-5 bg-oriental-gold text-white rounded-2xl font-black shadow-xl" :disabled="isSubmitting || tempRating === 0">
+                            <span v-if="!isSubmitting">送出評分</span>
+                            <span v-else class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto block"></span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else-if="sessionConfig?.type === 'heatmap'" class="flex-1 flex flex-col overflow-hidden relative">
+                    <p class="text-sm text-slate-500 mb-4 font-bold text-center flex-shrink-0">請點選你<span class="text-red-600">不理解</span>的字詞（可多選）</p>
+                    <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden flex-1 flex flex-col shadow-inner">
+                      <div class="flex-1 overflow-y-auto p-4 md:p-6 leading-loose text-justify font-serif transition-all relative hide-scrollbar" :class="textSizeClass" @touchstart="handleHeatmapTouchStart" @touchmove="handleHeatmapTouchMove" @mousedown="isDraggingHeatmap = true" @mouseup="isDraggingHeatmap = false" @mouseleave="isDraggingHeatmap = false">
+                        <span v-for="(char, idx) in (getSessionText(sessionConfig) || '').split('')" :key="idx" :data-idx="idx" @click="handleHeatmapClick(idx)" @mouseenter="!isMobile && isDraggingHeatmap && toggleHeatmapSelection(idx, true)" class="heatmap-char" :class="{ 'selected': studentHeatmapSelection.has(idx) }">{{ char }}</span>
+                      </div>
+                    </div>
+                    <div class="mt-4 flex-shrink-0">
+                      <button @click="submitHeatmap" :disabled="isSubmitting || studentHeatmapSelection.size === 0" class="btn-hover-effect w-full py-5 bg-ink-900 text-white rounded-2xl font-black shadow-xl disabled:opacity-50 text-lg">
+                        <span v-if="!isSubmitting">送出標記 ({{ studentHeatmapSelection.size }})</span>
+                        <span v-else class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto block"></span>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else-if="sessionConfig?.type === 'translation'" class="flex-1 flex flex-col overflow-hidden relative h-full">
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-4 overflow-y-auto shrink-0 max-h-[30vh] hide-scrollbar">
+                      <p class="font-serif text-slate-600 font-bold leading-relaxed text-justify whitespace-pre-wrap break-words overflow-x-hidden" :class="textSizeClass">{{ getSessionText(sessionConfig) }}</p>
+                    </div>
+                    <div class="flex-1 bg-white p-4 rounded-3xl border border-slate-200 shadow-inner flex flex-col min-h-[120px] mb-4">
+                      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">您的翻譯 ({{ studentProfile.seat }})</div>
+                      <textarea v-model="inputWord" placeholder="請在此輸入白話文翻譯..." class="flex-1 w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-serif resize-none text-slate-800 placeholder:text-slate-300 leading-relaxed transition-all" :class="textSizeClass"></textarea>
+                      <button @click="submitWord(null)" :disabled="isSubmitting" class="mt-4 btn-hover-effect w-full py-4 bg-oriental-blue text-white rounded-2xl font-black shadow-xl hover:bg-blue-900 text-lg">
+                        <span v-if="!isSubmitting">送出翻譯</span>
+                        <span v-else class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto block"></span>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else class="flex flex-col gap-6 flex-1 overflow-y-auto px-1 hide-scrollbar">
+                    <textarea v-model="inputWord" placeholder="在此輸入您的看法..." rows="5" class="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-3xl focus:border-red-600 focus:bg-white transition-all outline-none font-serif resize-none shadow-inner-soft leading-relaxed" :class="textSizeClass"></textarea>
+                    <button @click="submitWord(null)" :disabled="isSubmitting" class="btn-hover-effect w-full py-5 bg-ink-900 text-white rounded-2xl font-black shadow-xl text-lg mt-auto">
+                      <span v-if="!isSubmitting">送出回答</span>
+                      <span v-else class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto block"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else-if="isTeacher && currentSession" class="w-full flex flex-col h-full relative animate-in fade-in duration-700" :class="isFullScreen ? 'p-6 md:p-12' : 'p-2 md:p-6'">
+                <div class="text-center mb-4 md:mb-6 flex-shrink-0 relative">
+                  <h2 class="font-black text-slate-900 font-serif leading-tight tracking-tight drop-shadow-sm px-10 md:px-0" :class="isFullScreen ? 'text-4xl mb-6' : 'text-2xl md:text-3xl mb-3'">{{ sessionConfig?.fullQuestion || getSessionDisplayName(currentSession).question }}</h2>
+                  <div class="flex items-center justify-center gap-4">
+                    <div class="px-6 py-2 bg-white rounded-full border border-slate-200 shadow-sm flex items-center gap-3">
+                      <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest">已作答數</span>
+                      <span class="text-xl font-black text-red-700">{{ uniqueSubmittersCount }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="w-full flex-1 flex flex-col items-center overflow-hidden">
+                  <div v-if="!sessionConfig" class="flex flex-col items-center py-20 opacity-50"><div class="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin mb-4"></div><span class="text-xs font-bold text-slate-400">載入中</span></div>
+
+                  <div v-else-if="sessionConfig.type === 'heatmap'" class="w-full max-w-5xl bg-white p-4 md:p-12 rounded-[2rem] shadow-premium border border-slate-100 overflow-y-auto hide-scrollbar">
+                    <div class="flex items-center justify-between mb-6 border-b border-slate-50 pb-4">
+                      <h3 class="text-lg font-bold text-slate-700 font-serif">難詞診斷分佈</h3>
+                      <div class="flex gap-2">
+                        <button v-for="level in ['all', 'medium', 'high']" :key="level" @click="heatmapFilterLevel = level" class="px-3 py-1 rounded-full text-xs font-bold transition-all border" :class="heatmapFilterLevel === level ? 'bg-ink-800 text-white border-ink-800' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'">{{ level === 'all' ? '全部顯示' : (level === 'medium' ? '重點關注' : '高頻難點') }}</button>
+                      </div>
+                    </div>
+                    <div class="leading-loose text-xl md:text-2xl text-justify font-serif tracking-wider whitespace-pre-wrap">
+                      <span v-for="(char, idx) in (getSessionText(sessionConfig) || '').split('')" :key="idx">
+                        <span class="teacher-heatmap-char" :style="getHeatmapStyle(idx)" @mouseup="openHeatmapNoteInput(idx, $event)" @touchend="openHeatmapNoteInput(idx, $event)">{{ char }}<div class="tooltip-pop">{{ getHeatmapCount(idx) }}次 ({{ getHeatmapPercent(idx) }}%)</div></span>
+                        <span v-if="sessionConfig.notes && sessionConfig.notes[idx]" class="heatmap-note" @click.stop="zoomAnswer('（' + sessionConfig.notes[idx] + '）')">（{{ sessionConfig.notes[idx] }}）</span>
+                      </span>
+                    </div>
+                    
+                    <div v-if="showHeatmapNoteTool" class="fixed z-[100] flex items-center gap-2 p-2 bg-slate-900/95 backdrop-blur-md rounded-full shadow-2xl border border-white/10 text-white transition-all duration-100" :style="{ top: heatmapNotePos.y + 'px', left: heatmapNotePos.x + 'px' }" @mousedown.stop>
+                      <input ref="heatmapNoteInputRef" v-model="heatmapNoteInput" placeholder="輸入補充說明..." class="bg-transparent border-b border-white/30 px-3 py-1 text-sm outline-none w-48 font-bold text-white placeholder-white/50 focus:border-white" @keyup.enter="saveHeatmapNote">
+                      <button @click="saveHeatmapNote" class="bg-red-600 hover:bg-red-500 text-white p-2 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
+                    </div>
+                  </div>
+
+                  <div v-else-if="sessionConfig.type === 'translation'" class="w-full max-w-7xl flex flex-col lg:flex-row gap-6 items-start h-full overflow-hidden">
+                    <div class="hidden lg:flex lg:w-1/3 bg-slate-800 text-white rounded-[2rem] shadow-2xl flex-col h-full shrink-0 border border-slate-700/50 overflow-hidden relative">
+                      <div class="p-6 border-b border-white/10 flex-shrink-0"><span class="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-red-500 pl-2">原文對照</span></div>
+                      <div class="flex-1 overflow-y-auto p-8 scroll-smooth overflow-x-hidden hide-scrollbar"><p class="font-serif text-2xl leading-[2.2] font-bold text-justify text-slate-200 tracking-wide whitespace-pre-wrap break-words">{{ getSessionText(sessionConfig) }}</p></div>
+                    </div>
+                    <div class="lg:w-2/3 w-full flex flex-col gap-4 h-full overflow-y-auto pr-0 lg:pr-2 pb-20 thick-scrollbar">
+                      <div v-if="sortedWordsList.length === 0" class="text-center py-20 text-slate-400 font-bold bg-slate-50 rounded-3xl border border-dashed border-slate-200">尚無翻譯投稿</div>
+                      <div v-for="item in sortedWordsList" :key="item.index" class="card-enter bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex gap-4 flex-shrink-0">
+                        <div class="flex flex-col items-center gap-2">
+                          <div @click="toggleStudentLock(item.rawSeatNum)" class="flex-shrink-0 w-10 h-10 rounded-full text-white border flex items-center justify-center font-bold text-xs cursor-pointer transition-colors shadow-sm" :class="isStudentLocked(item.rawSeatNum) ? 'bg-slate-800 border-slate-900 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 hover:text-slate-800'" :title="isStudentLocked(item.rawSeatNum) ? '解除鎖定' : '點擊鎖定該生螢幕'">
+                             <span v-if="!isStudentLocked(item.rawSeatNum)" class="whitespace-nowrap">{{ item.seatNum }}</span>
+                             <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          </div>
+                          <button @click="toggleLike(item.index)" class="p-1.5 rounded-full transition-all" :class="item.isLiked ? 'text-red-500 bg-red-50' : 'text-slate-300 hover:text-red-400 hover:bg-slate-50'"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" :fill="item.isLiked ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+                        </div>
+                        <div class="flex-1 cursor-pointer" @click="zoomAnswer(item.cleanTxt, item.index, item.rawSeatNum)"><div class="text-lg text-slate-800 font-serif leading-relaxed" v-html="item.cleanTxt"></div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="sessionConfig.type === 'opentext'" class="w-full max-w-4xl space-y-6 overflow-y-auto pb-20 hide-scrollbar px-1">
+                    <div v-for="item in sortedWordsList" :key="item.index" class="flex items-end gap-3 card-enter">
+                      <div class="flex flex-col items-center gap-1 shrink-0 mb-2">
+                        <span @click="toggleStudentLock(item.rawSeatNum)" class="text-[10px] font-black cursor-pointer px-2 py-0.5 rounded-md transition-colors shadow-sm flex items-center justify-center min-w-[28px]" :class="isStudentLocked(item.rawSeatNum) ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'" :title="isStudentLocked(item.rawSeatNum) ? '解除鎖定' : '點擊鎖定該生螢幕'">
+                           <span v-if="!isStudentLocked(item.rawSeatNum)" class="whitespace-nowrap">{{ item.seatNum }}</span>
+                           <svg v-else xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </span>
+                        <button @click="toggleLike(item.index)" class="p-2 rounded-full border transition-all" :class="item.isLiked ? 'bg-red-50 border-red-200 text-red-600 scale-110' : 'bg-white border-slate-100 text-slate-300'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" :fill="item.isLiked ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+                      </div>
+                      <div @click="zoomAnswer(item.cleanTxt, item.index, item.rawSeatNum)" class="chat-bubble flex-shrink group"><p class="text-xl font-serif text-slate-800 leading-relaxed italic break-words" v-html="item.cleanTxt"></p></div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="sessionConfig.type === 'vote'" class="w-full h-full overflow-y-auto pb-10 flex flex-col justify-center hide-scrollbar">
+                    <div class="grid gap-4 w-full px-2 items-stretch" :style="{ gridTemplateColumns: `repeat(auto-fit, minmax(280px, 1fr))` }">
+                      <div v-for="(count, opt) in voteStats" :key="opt" @click="openVoteDetail(opt)" class="card-enter bg-white p-4 lg:p-6 rounded-3xl border border-slate-100 shadow-sm cursor-pointer hover:border-red-200 transition-all flex flex-col justify-center min-h-[120px]">
+                        <div class="flex flex-col md:flex-row justify-between md:items-end mb-2 lg:mb-4 px-1 lg:px-2 gap-2">
+                          <span class="text-lg lg:text-2xl font-black text-slate-800 break-words flex-1 leading-tight">{{ opt }}</span>
+                          <div class="flex items-baseline gap-1 lg:gap-2 whitespace-nowrap self-end md:self-auto">
+                            <span class="text-3xl lg:text-5xl font-black text-red-700 leading-none">{{ count }}</span>
+                            <span class="text-sm lg:text-lg text-slate-500 font-bold">({{ Math.round(count / (uniqueSubmittersCount || 1) * 100) }}%)</span>
+                          </div>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-4 lg:h-6 p-1 shadow-inner mt-auto">
+                          <div class="bg-gradient-to-r from-red-500 to-red-700 h-full rounded-full transition-all duration-1000" :style="{ width: (count / (uniqueSubmittersCount || 1) * 100) + '%' }"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else-if="sessionConfig.type === 'rating'" class="w-full h-full overflow-y-auto pb-10 flex flex-col justify-center hide-scrollbar">
+                    <div class="grid gap-4 w-full px-2 items-stretch" :style="{ gridTemplateColumns: `repeat(auto-fit, minmax(180px, 1fr))` }">
+                      <div v-for="(stats, group) in ratingGroupStats" :key="group" @click="openRatingDetail(group)" class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-100 card-enter flex flex-col items-center justify-center cursor-pointer hover:border-red-200 transition-all min-h-[180px]">
+                        <h4 class="text-lg lg:text-xl font-black text-slate-800 mb-2 lg:mb-4 text-center break-words line-clamp-3 leading-tight w-full">{{ group }}</h4>
+                        <div class="text-5xl lg:text-6xl font-black text-oriental-gold mb-2 lg:mb-4 font-serif">{{ stats.average }}</div>
+                        <div class="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full mt-auto">已評：{{ stats.count }}人</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else id="word-cloud" class="w-full h-[50vh] md:h-full pb-10"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </main>
+      </template>
+      
+      <!-- 教師端：登入審核等待清單 -->
+      <Teleport to="body">
+        <div v-if="isTeacher && showPendingModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showPendingModal = false">
+          <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl relative" @click.stop>
+            <button @click="showPendingModal = false" class="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2">✖</button>
+            <h3 class="text-2xl font-black text-slate-800 mb-2 flex items-center gap-2">🔔 登入審核</h3>
+            <p class="text-sm font-bold text-slate-500 mb-6">以下座號目前已在線，但有新的裝置嘗試登入：</p>
+            
+            <div class="flex flex-col gap-3 max-h-[40vh] overflow-y-auto mb-2 hide-scrollbar">
+               <div v-for="(data, seat) in pendingLogins" :key="seat" class="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span class="font-black text-xl text-slate-700">{{ seat }} <span class="text-sm text-slate-400 font-bold">號</span></span>
+                  <div class="flex gap-2">
+                     <button @click="rejectLogin(seat)" class="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition">拒絕</button>
+                     <button @click="approveLogin(seat, data.requestToken)" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold shadow-md hover:bg-red-700 transition">強制替換</button>
+                  </div>
+               </div>
+               <div v-if="pendingLoginsCount === 0" class="text-slate-400 font-bold text-center py-6 border-2 border-dashed rounded-xl border-slate-200">目前無待審核請求</div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+         <div v-if="showUnsubmittedModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showUnsubmittedModal = false">
+            <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl relative" @click.stop>
+               <button @click="showUnsubmittedModal = false" class="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2">✖</button>
+               <h3 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2">⏳ 未作答名單</h3>
+               <p class="text-sm font-bold text-slate-500 mb-4">目前在線且尚未送出「{{ sessionConfig?.fullQuestion || getSessionDisplayName(currentSession).short }}」答案的同學：</p>
+               
+               <div class="flex flex-wrap gap-2 max-h-[30vh] overflow-y-auto mb-6 hide-scrollbar">
+                  <span v-for="seat in unsubmittedSeats" :key="seat" class="px-3 py-1.5 bg-slate-100 text-slate-600 font-bold rounded-lg border border-slate-200">{{ seat }}</span>
+                  <div v-if="unsubmittedSeats.length === 0" class="text-green-600 font-bold w-full text-center py-4 bg-green-50 rounded-xl border border-green-200">太棒了！所有在線同學皆已作答完畢 🎉</div>
+               </div>
+               
+               <button @click="showUnsubmittedModal = false" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">確認</button>
+            </div>
+         </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showScoreModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showScoreModal = false">
+          <div class="bg-white rounded-[2rem] p-6 max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[85vh]" @click.stop>
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+               <h3 class="text-2xl font-black text-slate-800 flex items-center gap-2">🏆 班級計分表</h3>
+               <div class="flex items-center gap-2">
+                 <button @click="exportScoresToCSV" class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-bold hover:bg-green-100 transition border border-green-200 flex items-center gap-1">📥 匯出成績</button>
+                 <button @click="showScoreModal = false" class="p-2 rounded-full hover:bg-slate-100 text-slate-400">✖</button>
+               </div>
+            </div>
+            <div class="flex-1 overflow-y-auto thick-scrollbar pr-2 pb-4">
+               <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  <div v-for="n in currentClassSize" :key="n" class="bg-slate-50 rounded-xl border border-slate-200 p-2 flex flex-col items-center">
+                     <span class="text-sm font-black text-slate-500 mb-1">{{ n.toString().padStart(2, '0') }}</span>
+                     <span class="text-xl font-black text-amber-600 mb-2">{{ studentScores[n.toString().padStart(2, '0')] || 0 }}</span>
+                     <div class="flex gap-1 w-full">
+                        <button @click="updateScore(n.toString().padStart(2, '0'), -1)" class="score-btn flex-1 bg-white border border-slate-200 rounded text-slate-400 font-bold hover:bg-slate-100">-</button>
+                        <button @click="updateScore(n.toString().padStart(2, '0'), 1)" class="score-btn flex-1 bg-amber-100 border border-amber-200 rounded text-amber-700 font-bold hover:bg-amber-200">+</button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showAttendanceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showAttendanceModal = false">
+          <div class="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative" @click.stop>
+            <div class="flex justify-between items-center mb-4 pb-4 border-b border-slate-100">
+               <h3 class="text-2xl font-black text-slate-800">出缺席狀態</h3>
+               <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+                  <span class="text-xs font-bold transition-colors duration-200" :class="isClassOpen(activeClassName) ? 'text-green-600' : 'text-slate-400'">{{ isClassOpen(activeClassName) ? '🟢 教室開放中' : '🔴 教室已鎖定' }}</span>
+                  <button type="button" @click.stop.prevent="toggleClassDoor(activeClassName)" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-300 ease-in-out focus:outline-none shadow-inner ring-1 ring-inset" :class="isClassOpen(activeClassName) ? 'bg-green-500 ring-green-600/20 hover:bg-green-400' : 'bg-slate-300 ring-slate-400/20 hover:bg-slate-200'">
+                      <span class="pointer-events-none absolute left-[2px] flex h-[20px] w-[20px] transform items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-300 ease-in-out" :class="isClassOpen(activeClassName) ? 'translate-x-[20px]' : 'translate-x-0'">
+                          <svg v-if="isClassOpen(activeClassName)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                          <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      </span>
+                  </button>
+               </div>
+            </div>
+            
+            <div class="mb-4 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                 <label class="text-sm font-bold text-slate-500">班級總人數：</label>
+                 <select v-model="currentClassSize" @change="saveClassSize" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none font-bold text-slate-700">
+                   <option v-for="n in 100" :key="n" :value="n">{{ n }} 人</option>
+                 </select>
+              </div>
+              <button @click="forceResetAttendance" class="px-2 py-1 text-slate-400 hover:text-red-500 text-xs font-bold underline transition">重置名單</button>
+            </div>
+            
+            <h4 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest mt-6">已出席座號 (實到 {{ onlineSeats.length }})</h4>
+            <div class="flex flex-wrap gap-2 max-h-[15vh] overflow-y-auto mb-4 border-b border-slate-100 pb-4 hide-scrollbar">
+              <span v-for="seat in onlineSeats" :key="'online-'+seat" class="px-2 py-1 bg-green-50 text-green-700 font-bold rounded shadow-sm border border-green-200">{{ seat }}</span>
+              <span v-if="onlineSeats.length === 0" class="text-slate-400 font-bold text-sm">目前尚無人登入</span>
+            </div>
+
+            <h4 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">尚未登入座號 (缺席 {{ absentSeats.length }})</h4>
+            <div class="flex flex-wrap gap-2 max-h-[15vh] overflow-y-auto mb-6 hide-scrollbar">
+              <span v-for="seat in absentSeats" :key="'absent-'+seat" class="px-2 py-1 bg-red-50 text-red-400 font-bold rounded shadow-sm border border-red-100 line-through decoration-red-300">{{ seat }}</span>
+              <span v-if="absentSeats.length === 0" class="text-green-600 font-bold text-sm">全員到齊！</span>
+            </div>
+            
+            <button @click="showAttendanceModal = false" class="w-full py-3 mt-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">關閉</button>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showQR" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showQR = false">
+          <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl relative" @click.stop>
+            <button @click="showQR = false" class="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            <h3 class="text-2xl font-black text-slate-800 mb-2 font-serif">學生入口條碼</h3>
+            <p class="text-sm text-slate-500 mb-6 font-bold">請學生使用載具掃描下方條碼</p>
+            <div class="flex justify-center mb-6"><img :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl)}`" alt="QR Code" class="rounded-xl shadow-sm border border-slate-100 p-2"></div>
+            <div class="text-[10px] text-slate-400 break-all bg-slate-50 p-2 rounded-lg">{{ currentUrl }}</div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showDetailModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showDetailModal = false">
+          <div class="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative flex flex-col max-h-[80vh]" @click.stop>
+            <button @click="showDetailModal = false" class="absolute top-4 right-4 text-slate-400 hover:bg-slate-100 rounded-full p-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            <h3 class="text-xl font-black text-slate-800 mb-4 font-serif break-words pr-6">{{ detailModalTitle }}</h3>
+            <div class="flex-1 overflow-y-auto pr-2 hide-scrollbar space-y-2">
+              <div v-if="detailModalList.length === 0" class="text-slate-400 text-sm py-4 text-center font-bold">尚無作答資料</div>
+              <div v-for="(item, idx) in detailModalList" :key="idx" class="bg-slate-50 border border-slate-100 p-3 rounded-xl text-slate-700 font-bold text-sm">{{ item }}</div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showDistractedModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" @click="showDistractedModal = false">
+          <div class="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl flex flex-col max-h-[85vh]" @click.stop>
+            <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                <h3 class="text-2xl font-black text-slate-800 flex items-center gap-2">監控中心</h3>
+                <button @click="showDistractedModal = false" class="text-slate-400 hover:bg-slate-100 rounded-full p-2">✖</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto pr-2 hide-scrollbar">
+                <h4 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">目前分心 / 離線 (正在其他視窗或異常斷線)</h4>
+                <div class="flex flex-wrap gap-2 mb-4 border-b border-slate-100 pb-4">
+                  <span v-for="seat in distractedStudents" :key="'dist-'+seat" class="px-4 py-2 bg-amber-50 text-amber-700 font-black rounded-lg border border-amber-200">{{ seat }}</span>
+                  <div v-if="distractedStudents.length === 0" class="text-slate-400 text-sm py-2 w-full font-bold">目前無人分心，大家都很專注！</div>
+                </div>
+
+                <div class="flex justify-between items-end mb-2">
+                   <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">曾經分心 (本堂歷史紀錄)</h4>
+                   <button @click="resetDistractedHistory" class="text-xs font-bold text-red-500 hover:text-red-700 underline underline-offset-2 transition-colors">🧹 結算並自動扣分</button>
+                </div>
+                <div class="text-[10px] text-slate-400 mb-3 font-bold bg-slate-50 p-2 rounded-lg border">💡 結算公式：(次數 × 1分) + (累計秒數 ÷ 30) × 1分</div>
+                
+                <div class="flex flex-col gap-2 mb-2">
+                  <div v-for="item in distractedHistoryArray" :key="'hist-'+item.seat" class="flex justify-between items-center px-3 py-2 bg-slate-50 text-slate-600 font-bold rounded-lg border border-slate-200 shadow-sm">
+                      <div class="flex items-center gap-3">
+                         <span class="text-lg font-black text-slate-700">{{ item.seat }}<span class="text-sm font-bold text-slate-400">號</span></span>
+                         <span class="text-xs font-black bg-slate-200 text-slate-500 px-2 py-1 rounded-md">{{ item.count }} 次</span>
+                         <span class="text-xs font-black bg-red-100 text-red-600 px-2 py-1 rounded-md">累計 {{ formatSeconds(item.totalMs) }} 秒</span>
+                      </div>
+                  </div>
+                  <div v-if="distractedHistoryArray.length === 0" class="text-slate-400 text-sm py-2 w-full font-bold text-center border-2 border-dashed border-slate-200 rounded-xl">本節課尚未有人分心。</div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="zoomedAnswer" class="fixed inset-0 bg-slate-900/95 z-[150] flex flex-col justify-center p-8" @click="zoomedAnswer = null">
+          <div class="max-w-5xl mx-auto w-full bg-white rounded-[2rem] p-8 md:p-12 relative overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" @click.stop>
+            <div v-if="zoomedAnswerSeat" class="absolute top-4 left-6 bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-sm font-bold shadow-sm">座號: {{ zoomedAnswerSeat }}</div>
+            <div class="flex-1 overflow-y-auto mt-4 text-2xl md:text-4xl font-serif leading-relaxed text-slate-800 focus-text select-text" @mouseup="checkSelection($event)" @touchend="checkSelection($event)" v-html="zoomedAnswerHTML"></div>
+            
+            <div v-if="showCorrectionTool" class="fixed z-[160] flex gap-2 p-2 bg-slate-900 rounded-full text-white shadow-xl transition-all duration-75" :style="{ top: correctionPos.y + 'px', left: correctionPos.x + 'px' }" @mousedown.stop>
+              <input ref="correctionInputRef" v-model="correctionInput" placeholder="輸入正確寫法..." class="bg-transparent border-b px-2 py-1 text-sm outline-none" @keyup.enter="applyCorrection">
+              <button @click="applyCorrection" class="bg-green-600 p-2 rounded-full hover:bg-green-500"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" stroke="white" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
+            </div>
+            <button @click="zoomedAnswer = null" class="mt-8 px-8 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold mx-auto block hover:bg-slate-200 transition flex-shrink-0">關閉討論</button>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showAuthModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+          <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-xs w-full text-center">
+            <h3 class="text-xl font-black mb-8 font-serif italic">教師驗證</h3>
+            <input type="password" v-model="passwordInput" placeholder="密碼" class="w-full bg-slate-50 p-5 rounded-2xl text-center mb-8 border-2 outline-none font-bold tracking-widest focus:border-slate-800 transition" @keyup.enter="checkPassword">
+            <div class="flex gap-4">
+              <button @click="showAuthModal = false; passwordInput=''" class="flex-1 py-3 text-slate-400 font-bold uppercase text-xs hover:bg-slate-50 rounded-xl transition">返回</button>
+              <button @click="checkPassword" class="flex-1 py-4 bg-slate-900 text-white rounded-xl font-bold shadow-lg uppercase text-xs btn-hover-effect">登入</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div class="fixed bottom-6 right-6 z-[300] flex flex-col-reverse gap-2 w-full max-w-sm px-4 pointer-events-none items-end">
+          <TransitionGroup name="toast">
+            <div v-for="toast in toasts" :key="toast.id" class="bg-white rounded-xl shadow-2xl border p-4 flex items-center gap-3 pointer-events-auto" :class="toast.type === 'error' ? 'border-red-100' : 'border-slate-100'">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" :class="toast.type === 'error' ? 'bg-red-50 text-red-600' : (toast.type === 'info' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600')">
+                <svg v-if="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <svg v-else-if="toast.type === 'info'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </div>
+              <p class="font-bold text-sm text-slate-700">{{ toast.message }}</p>
+            </div>
+          </TransitionGroup>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showCreateModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+          <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh]" @click.stop>
+            <div class="p-8 border-b border-slate-100 flex-shrink-0 bg-slate-50/50 flex items-center justify-between">
+              <h3 class="text-2xl font-black text-slate-900 font-serif">新建互動活動</h3>
+              <button @click="showCreateModal = false" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+
+            <div ref="createModalScrollRef" class="p-8 flex-1 overflow-y-auto space-y-7 thick-scrollbar">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">選擇班級</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <button @click="useExistingFolder = !useExistingFolder; newProject = ''" class="sm:w-auto w-full px-5 py-3 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:border-red-600 hover:text-red-700 transition-all flex-shrink-0">{{ useExistingFolder ? '＋ 新建' : '☰ 選擇' }}</button>
+                  <select v-if="useExistingFolder" v-model="newProject" class="w-full flex-1 bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 font-bold outline-none appearance-none text-slate-700">
+                    <option value="" disabled>請選取班級...</option>
+                    <option v-for="(v, k) in groupedSessions" :key="k" :value="k">{{ k }}</option>
+                  </select>
+                  <input v-else type="text" v-model="newProject" placeholder="輸入新班級名稱，例如：801班" class="w-full flex-1 bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 font-bold outline-none text-slate-700">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">選擇課程單元</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <button @click="useExistingCourse = !useExistingCourse; newCourse = ''" :disabled="!newProject" class="sm:w-auto w-full px-5 py-3 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:border-red-600 hover:text-red-700 transition-all flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">{{ useExistingCourse ? '＋ 新建' : '☰ 選擇' }}</button>
+                  <select v-if="useExistingCourse" v-model="newCourse" :disabled="!newProject" class="w-full flex-1 bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 font-bold outline-none appearance-none text-slate-700 disabled:opacity-40">
+                    <option value="" disabled>請選取單元...</option>
+                    <option v-for="c in availableCourses" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                  <input v-else type="text" v-model="newCourse" :disabled="!newProject" placeholder="輸入新單元名稱，例如：第三課" class="w-full flex-1 bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 font-bold outline-none text-slate-700 disabled:opacity-40">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">活動題目</label>
+                <textarea v-model="newQuestion" placeholder="請輸入問題題目..." rows="3" class="w-full bg-slate-50 p-5 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold text-lg text-slate-800 placeholder-slate-300 resize-none"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">活動類型</label>
+                <div class="grid grid-cols-3 gap-3">
+                  <button v-for="t in ['wordcloud','vote','opentext','rating','heatmap','translation']" :key="t" @click="setTypeAndScroll(t)" class="py-4 px-2 rounded-2xl text-sm font-bold transition-all border-2 flex flex-col items-center gap-1" :class="newType === t ? 'bg-ink-800 border-ink-800 text-white shadow-lg scale-[1.02]' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'">{{ getTypeName(t) }}</button>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <input type="checkbox" id="allowMultiple" v-model="newAllowMultiple" class="w-5 h-5 text-red-600 rounded border-slate-300 focus:ring-red-500 cursor-pointer">
+                <label for="allowMultiple" class="text-sm font-bold text-slate-700 cursor-pointer">允許學生重複作答 / 修改答案</label>
+              </div>
+
+              <div v-if="newType === 'vote' || newType === 'rating'" class="p-5 bg-slate-50 rounded-3xl space-y-4 border-2 border-dashed border-slate-200">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">選項設定</span>
+                <div v-for="(opt, idx) in newOptions" :key="idx" class="flex gap-2 items-center">
+                  <div class="flex-1 bg-white border-2 border-slate-200 focus-within:border-red-600 p-1 rounded-xl flex items-center shadow-sm transition-colors">
+                    <span class="pl-3 text-xs font-bold text-slate-300 flex-shrink-0">{{ idx + 1 }}.</span>
+                    <input type="text" v-model="newOptions[idx]" class="flex-1 bg-transparent p-3 outline-none font-bold text-slate-700" placeholder="輸入選項內容">
+                  </div>
+                  <button @click="newOptions.splice(idx, 1)" class="p-2 text-slate-300 hover:text-red-500 transition-colors flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                </div>
+                <button @click="newOptions.push('')" class="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center gap-2">＋ 增加選項</button>
+              </div>
+
+              <div v-if="newType === 'heatmap' || newType === 'translation'" class="space-y-3">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">文本內容（文言文／詩詞）</label>
+                <textarea v-model="newTextContent" placeholder="請在此貼上課文內容..." rows="6" class="w-full bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 focus:border-red-600 outline-none font-serif text-slate-700 resize-none"></textarea>
+              </div>
+            </div>
+
+            <div class="p-8 bg-white border-t border-slate-100 flex gap-4 flex-shrink-0">
+              <button @click="showCreateModal = false" class="flex-1 py-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">取消</button>
+              <button @click="createNewSession" class="flex-[2] py-4 bg-red-700 text-white rounded-2xl font-black shadow-xl shadow-red-100 btn-hover-effect flex items-center justify-center gap-2">
+                <span>立即建立</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showEditActivityModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+          <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh]" @click.stop>
+            <div class="p-8 border-b border-slate-100 flex-shrink-0 bg-slate-50/50 flex items-center justify-between">
+              <h3 class="text-2xl font-black text-slate-900 font-serif">編輯活動</h3>
+              <button @click="showEditActivityModal = false" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+
+            <div class="p-8 flex-1 overflow-y-auto space-y-6 thick-scrollbar">
+              <div v-if="isEditLoading" class="flex justify-center py-16"><div class="w-10 h-10 border-4 border-slate-200 border-t-red-600 rounded-full animate-spin"></div></div>
+              <template v-else>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">移動班級</label>
+                  <select v-model="editData.folder" class="w-full bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 font-bold outline-none appearance-none text-slate-700">
+                    <option v-for="(v, k) in groupedSessions" :key="k" :value="k">{{ k }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">修改單元</label>
+                  <input type="text" v-model="editData.course" class="w-full bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold text-slate-700">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">修改題目</label>
+                  <textarea v-model="editData.question" rows="3" class="w-full bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold text-slate-700 resize-none"></textarea>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="editAllowMultiple" v-model="editData.allowMultiple" class="w-5 h-5 text-red-600 rounded border-slate-300 focus:ring-red-500 cursor-pointer">
+                  <label for="editAllowMultiple" class="text-sm font-bold text-slate-700 cursor-pointer">允許學生重複作答 / 修改答案</label>
+                </div>
+
+                <div v-if="editData.type === 'vote' || editData.type === 'rating'" class="p-5 bg-slate-50 rounded-3xl space-y-4 border-2 border-dashed border-slate-200">
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">選項設定</span>
+                  <div v-for="(opt, idx) in editData.options" :key="idx" class="flex gap-2 items-center">
+                    <div class="flex-1 bg-white border-2 border-slate-200 focus-within:border-red-600 p-1 rounded-xl flex items-center transition-colors">
+                      <span class="pl-3 text-xs font-bold text-slate-300">{{ idx + 1 }}.</span>
+                      <input type="text" v-model="editData.options[idx]" class="flex-1 bg-transparent p-3 outline-none font-bold text-slate-700" placeholder="輸入選項內容">
+                    </div>
+                    <button @click="editData.options.splice(idx, 1)" class="p-2 text-slate-300 hover:text-red-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                  </div>
+                  <button @click="editData.options.push('')" class="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold hover:text-red-600 hover:border-red-300 transition-all">＋ 增加選項</button>
+                </div>
+
+                <div v-if="editData.type === 'heatmap' || editData.type === 'translation'" class="space-y-3">
+                  <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">文本內容</label>
+                  <textarea v-model="editData.textContent" rows="6" placeholder="請在此貼上課文內容..." class="w-full bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 focus:border-red-600 outline-none font-serif text-slate-700 resize-none"></textarea>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <p class="text-xs font-bold text-amber-700">⚠️ 若更改班級、單元或題目名稱，活動資料會自動移轉。活動類型無法變更。</p>
+                </div>
+              </template>
+            </div>
+
+            <div class="p-8 bg-white border-t border-slate-100 flex gap-4 flex-shrink-0">
+              <button @click="showEditActivityModal = false" class="flex-1 py-4 border-2 border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">取消</button>
+              <button @click="submitEditActivity" :disabled="isEditLoading" class="flex-[2] py-4 bg-red-700 text-white rounded-2xl font-black shadow-xl btn-hover-effect disabled:opacity-50">儲存變更</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showEditFolderModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+          <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-xs w-full text-center" @click.stop>
+            <h3 class="text-xl font-black mb-2 font-serif">班級更名</h3>
+            <p class="text-xs text-slate-400 mb-6 font-bold">原名稱：{{ oldFolderName }}</p>
+            <input type="text" v-model="tempFolderName" class="w-full bg-slate-50 p-4 rounded-xl border-2 border-slate-200 focus:border-red-600 outline-none font-bold text-center mb-8 text-lg" @keyup.enter="submitRenameFolder">
+            <div class="flex gap-4">
+              <button @click="showEditFolderModal = false" class="flex-1 py-3 text-slate-400 font-bold text-xs uppercase border border-slate-200 rounded-xl hover:bg-slate-50 transition">取消</button>
+              <button @click="submitRenameFolder" class="flex-1 py-3 bg-red-700 text-white rounded-xl font-bold shadow-lg btn-hover-effect">確認更名</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import { getDatabase, ref as dbRef, onValue, set, get, update, remove, runTransaction, off, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+      import { createApp, ref, computed, onMounted, watch, nextTick } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDLtNgMQDvsrXdySLp5YWd1-m2TBvyMTAw",
+        authDomain: "yofish-interactive-system.firebaseapp.com",
+        databaseURL: "https://yofish-interactive-system-default-rtdb.firebaseio.com",
+        projectId: "yofish-interactive-system",
+        storageBucket: "yofish-interactive-system.firebasestorage.app",
+        messagingSenderId: "189013873867",
+        appId: "1:189013873867:web:00d8fa8cfdbcd6c03c374e",
+        measurementId: "G-3VL4YLPVLV"
+      };
+
+      let app, db;
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getDatabase(app);
+      } catch (error) {
+        console.error("Firebase initialization error", error);
+      }
+      
+      const safeKey = (str) => {
+          if(!str) return 'empty';
+          return encodeURIComponent(str).replace(/\./g, '%2E').replace(/#/g, '%23').replace(/\$/g, '%24').replace(/\[/g, '%5B').replace(/\]/g, '%5D');
+      };
+      const decodeKey = (str) => {
+          if(!str) return '';
+          try { return decodeURIComponent(str.replace(/%2E/g, '.').replace(/%23/g, '#').replace(/%24/g, '$').replace(/%5B/g, '[').replace(/%5D/g, ']')); } catch(e) { return str; }
+      };
+
+      const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+          if (timeoutId) clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => { func.apply(null, args); }, delay);
+        };
+      };
+
+      createApp({
+        setup() {
+          const getSessionDisplayName = (n) => { 
+             const m = n?.match(/^\[(.*?)\]\[(.*?)\]\s*(.*)$/); 
+             return m ? { project: m[1], course: m[2], question: m[3], short: m[3] } : { short: n || '' }; 
+          };
+
+          // ===== 音效控制與焦點搶奪 (Web Audio API) =====
+          let audioCtx = null;
+          const initAudio = () => { 
+             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+             if(audioCtx.state === 'suspended') audioCtx.resume(); 
+          };
+          
+          const playSound = (type) => {
+             if (!audioCtx) return;
+             try {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+                if (type === 'success') { osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1); gainNode.gain.setValueAtTime(0.1, now); osc.type = 'sine'; osc.start(); osc.stop(now + 0.15); }
+                else if (type === 'error') { osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2); gainNode.gain.setValueAtTime(0.1, now); osc.type = 'sawtooth'; osc.start(); osc.stop(now + 0.2); }
+                else if (type === 'notify') { osc.frequency.setValueAtTime(880, now); gainNode.gain.setValueAtTime(0.1, now); osc.type = 'sine'; osc.start(); osc.stop(now + 0.1); setTimeout(()=>{const o2=audioCtx.createOscillator();const g2=audioCtx.createGain();o2.connect(g2);g2.connect(audioCtx.destination);o2.frequency.setValueAtTime(1100, audioCtx.currentTime);g2.gain.setValueAtTime(0.1, audioCtx.currentTime);o2.start();o2.stop(audioCtx.currentTime+0.1)}, 150); }
+                else if (type === 'pop') { osc.frequency.setValueAtTime(400, now); gainNode.gain.setValueAtTime(0.1, now); osc.type = 'triangle'; osc.start(); osc.stop(now + 0.05); }
+             } catch(e) {}
+          };
+
+          // 核心焦點劫持武器：無聲超高頻脈衝
+          const silentPulse = () => {
+              if (!audioCtx || audioCtx.state !== 'running') return;
+              try {
+                  const osc = audioCtx.createOscillator();
+                  const gain = audioCtx.createGain();
+                  osc.type = 'sine';
+                  osc.frequency.setValueAtTime(20000, audioCtx.currentTime); // 20kHz 人耳無感
+                  gain.gain.setValueAtTime(0, audioCtx.currentTime); // 音量 0
+                  osc.connect(gain);
+                  gain.connect(audioCtx.destination);
+                  osc.start();
+                  osc.stop(audioCtx.currentTime + 0.1);
+              } catch(e) {}
+          };
+
+          // 節流保護：每 3 秒最多觸發一次脈衝，避免設備耗能
+          let lastPulseTime = 0;
+          const triggerSilentPulse = () => {
+              const now = Date.now();
+              if (now - lastPulseTime > 3000) {
+                  silentPulse();
+                  lastPulseTime = now;
+              }
+          };
+
+          // ===== 核心狀態 =====
+          const isTeacher = ref(false);
+          const showAuthModal = ref(false);
+          const passwordInput = ref('');
+          const isFullScreen = ref(false);
+          const hasJoined = ref(false);
+          const studentProfile = ref({ className: '', seat: '', sessionToken: '' });
+          const dynamicSeatLimit = ref(50);
+          const textSize = ref('normal');
+          const isConnected = ref(null);
+
+          // 重複登入審核狀態
+          const isWaitingForLogin = ref(false);
+          const showPendingModal = ref(false);
+          const pendingLogins = ref({});
+          const pendingLoginsCount = computed(() => Object.keys(pendingLogins.value).length);
+          let waitTokenListener = null;
+          let waitRejectListener = null;
+
+          // Screen Wake Lock API
+          let wakeLock = null;
+          const requestWakeLock = async () => {
+             if ('wakeLock' in navigator) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
+             }
+          };
+          const releaseWakeLock = async () => {
+             if (wakeLock !== null) { await wakeLock.release().catch(()=>{}); wakeLock = null; }
+          };
+
+          // 分屏 / 子母畫面偵測狀態
+          const isSplitScreen = ref(false);
+          const checkSplitScreen = () => {
+              if (isTeacher.value || !hasJoined.value) return;
+              const isPortrait = window.innerHeight > window.innerWidth;
+              const screenW = isPortrait ? Math.min(window.screen.width, window.screen.height) : Math.max(window.screen.width, window.screen.height);
+              if (window.innerWidth < screenW * 0.8) isSplitScreen.value = true;
+              else isSplitScreen.value = false;
+          };
+
+          // 全域自訂確認 Modal
+          const confirmModal = ref({ show: false, message: '', action: null });
+          const showConfirm = (message, action) => { confirmModal.value = { show: true, message, action }; };
+          const executeConfirm = () => { if(confirmModal.value.action) confirmModal.value.action(); confirmModal.value.show = false; };
+
+          // ===== 活動狀態 =====
+          const sessions = ref([]);
+          const currentSession = ref('');
+          const activeSession = ref(null);
+          const isLoadingSessions = ref(false);
+          const isSessionLoading = ref(false);
+          const wordsData = ref([]);
+          const sessionConfig = ref(null);
+          const inputWord = ref('');
+          const isSubmitting = ref(false);
+
+          const tempRating = ref(0);
+          const selectedRatingTarget = ref(null);
+          const studentSelectedVote = ref(null);
+          const studentHeatmapSelection = ref(new Set());
+          const showStamp = ref(false);
+          const isDraggingHeatmap = ref(false);
+          let isScrollingHeatmap = false;
+
+          // ===== UI 狀態 =====
+          const showQR = ref(false);
+          const currentUrl = ref("");
+          const showDistractedModal = ref(false);
+          const showAttendanceModal = ref(false);
+          const showDetailModal = ref(false);
+          const showUnsubmittedModal = ref(false);
+          const detailModalTitle = ref('');
+          const detailModalList = ref([]);
+          const expandedFolders = ref(new Set());
+          const expandedCourses = ref(new Set());
+
+          // ===== 高階監控與秩序管理 =====
+          const isHeadsUp = ref(false);
+          let headsUpListener = null;
+          const studentLocks = ref({});
+          let locksListener = null;
+          const classOpenStates = ref({}); 
+          const distractionLogs = ref({});
+          let distractionLogsPath = '';
+
+          // ===== 隨機抽籤與追問 =====
+          const teacherRandomPickData = ref(null);
+          const showStudentRandomPick = ref(false);
+          const studentRandomPickInput = ref('');
+          const isRandomPickFocused = ref(false);
+          let randomPickListener = null;
+
+          // ===== 記點機制 =====
+          const showScoreModal = ref(false);
+          const studentScores = ref({});
+          let scoreListenerPath = null;
+          const localMyScore = ref(null);
+          const showScorePopup = ref(false);
+          const scorePopupDelta = ref(0);
+          const scorePopupType = ref('increase'); 
+
+          // ===== CRUD Modal 狀態 =====
+          const showCreateModal = ref(false);
+          const showEditActivityModal = ref(false);
+          const showEditFolderModal = ref(false);
+          const isEditLoading = ref(false);
+          const newProject = ref('');
+          const newCourse = ref('');
+          const newQuestion = ref('');
+          const newType = ref('wordcloud');
+          const newOptions = ref(['', '']);
+          const newTextContent = ref('');
+          const newAllowMultiple = ref(true);
+          const useExistingFolder = ref(true);
+          const useExistingCourse = ref(true);
+          const createModalScrollRef = ref(null);
+          const editData = ref({ originalName: '', folder: '', course: '', question: '', type: '', options: [], textContent: '', allowMultiple: true, notes: null });
+          const tempFolderName = ref('');
+          const oldFolderName = ref('');
+
+          // ===== Zoom & Correction =====
+          const zoomedAnswer = ref(null);
+          const zoomedAnswerHTML = ref('');
+          const zoomedAnswerIndex = ref(-1);
+          const zoomedAnswerSeat = ref('');
+          const showCorrectionTool = ref(false);
+          const correctionPos = ref({ x: 0, y: 0 });
+          const correctionInput = ref('');
+          const correctionInputRef = ref(null);
+          const selectionRange = ref(null);
+
+          // ===== Heatmap Note =====
+          const showHeatmapNoteTool = ref(false);
+          const heatmapNoteInput = ref('');
+          const heatmapNotePos = ref({ x: 0, y: 0 });
+          const heatmapNoteTargetIdx = ref(-1);
+          const heatmapNoteInputRef = ref(null);
+          const heatmapFilterLevel = ref('all');
+
+          // ===== Misc & Monitoring =====
+          const likedAnswersObj = ref({});
+          const windowWidth = ref(window.innerWidth);
+          const isMobile = computed(() => windowWidth.value < 768);
+          const mobileView = ref('list');
+          const toasts = ref([]);
+          let toastId = 0;
+          let currentSessionListener = null;
+          let currentLikesListener = null;
+          
+          const activeClassName = ref(''); 
+          const distractedStudents = ref([]);
+          const hasNewDistractions = ref(false); 
+          const onlineSeats = ref([]);
+          const currentClassSize = ref(35);
+          
+          let presenceRef = null;
+          let presenceListenerPath = ''; 
+          let pendingListenerPath = '';
+          
+          const formatSeconds = (ms) => Math.floor(ms / 1000);
+
+          const distractedHistoryArray = computed(() => {
+              return Object.entries(distractionLogs.value)
+                  .map(([seat, data]) => ({ seat, count: data.count || 0, totalMs: data.totalMs || 0 }))
+                  .sort((a, b) => a.seat.localeCompare(b.seat));
+          });
+
+          // Toast
+          const triggerToast = (msg, type = 'info') => {
+            const id = toastId++;
+            toasts.value.push({ id, message: msg, type });
+            setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id); }, 3000);
+          };
+
+          // CSV 匯出成績
+          const exportScoresToCSV = () => {
+              const totalSeats = currentClassSize.value;
+              const className = activeClassName.value || '未命名班級';
+              let csvContent = "\uFEFF"; 
+              csvContent += "座號,分數\n";
+              for (let i = 1; i <= totalSeats; i++) {
+                  const seat = i.toString().padStart(2, '0');
+                  const score = studentScores.value[seat] || 0;
+                  csvContent += `${seat},${score}\n`;
+              }
+              const d = new Date();
+              const dateString = `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.setAttribute("href", url);
+              link.setAttribute("download", `${className}_計分表_${dateString}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+          };
+
+          // 教室門控開關
+          const isClassOpen = (className) => classOpenStates.value[safeKey(className)] !== false;
+
+          const toggleClassDoor = async (className) => {
+              if(!db || !className) return;
+              if (isClassOpen(className)) {
+                  showConfirm(`確定要鎖定「${className}」嗎？\n鎖定後將強制登出目前所有學生，並禁止新登入。`, async () => {
+                      await set(dbRef(db, `global/classOpen/${safeKey(className)}`), false);
+                      await set(dbRef(db, `global/forceLogout/${safeKey(className)}`), Date.now());
+                      await set(dbRef(db, `presence/${safeKey(className)}`), null);
+                      if (activeClassName.value === className) {
+                          set(dbRef(db, `distractionLogs/${safeKey(className)}`), null);
+                          hasNewDistractions.value = false;
+                      }
+                      triggerToast(`「${className}」已鎖定，學生已強制登出`, 'success');
+                  });
+              } else {
+                  await set(dbRef(db, `global/classOpen/${safeKey(className)}`), true);
+                  await set(dbRef(db, `global/forceLogout/${safeKey(className)}`), null);
+                  triggerToast(`「${className}」已開放登入`, 'success');
+              }
+          };
+
+          // 未作答計算
+          const studentHasSubmitted = (seat) => {
+              if (!wordsData.value) return false;
+              if (sessionConfig.value?.type === 'rating') {
+                  const ratedCount = wordsData.value.filter(w => w.startsWith(`[${seat}] `)).length;
+                  const totalOptions = sessionConfig.value.options?.length || 0;
+                  return ratedCount >= totalOptions;
+              }
+              return wordsData.value.some(w => w.startsWith(`[${seat}] `));
+          };
+          
+          const unsubmittedSeats = computed(() => {
+              if(!activeClassName.value || !currentSession.value) return [];
+              return onlineSeats.value.filter(seat => !studentHasSubmitted(seat));
+          });
+
+          const currentStudentRatedCount = computed(() => {
+              if (!wordsData.value || !studentProfile.value.seat) return 0;
+              return wordsData.value.filter(w => w.startsWith(`[${studentProfile.value.seat}] `)).length;
+          });
+
+          // 學生入口
+          const availableClassesForStudent = computed(() => {
+            const classes = new Set();
+            sessions.value.forEach(s => { const m = s.match(/^\[(.*?)\]/); if (m) classes.add(m[1]); });
+            return Array.from(classes).sort();
+          });
+          
+          watch(() => studentProfile.value.className, async (newVal) => {
+              if (newVal && db) {
+                  try {
+                      const snap = await get(dbRef(db, `global/classSizes/${safeKey(newVal)}`));
+                      dynamicSeatLimit.value = snap.exists() ? snap.val() : 50;
+                  } catch (e) { dynamicSeatLimit.value = 50; }
+              }
+          });
+
+          // 改寫版加入等待室邏輯
+          const joinClass = async () => {
+            initAudio(); 
+            if (!studentProfile.value.className) { triggerToast('請選擇班級', 'error'); playSound('error'); return; }
+            if (!studentProfile.value.seat.trim()) { triggerToast('請選擇座號', 'error'); playSound('error'); return; }
+            
+            if (db) {
+                try {
+                    const classSnap = await get(dbRef(db, `global/classOpen/${safeKey(studentProfile.value.className)}`));
+                    if (classSnap.exists() && classSnap.val() === false) {
+                        triggerToast('目前教室已鎖定，禁止登入', 'error');
+                        playSound('error');
+                        return;
+                    }
+
+                    // 取得既有裝置的 Token
+                    let storedProfile = null;
+                    try { storedProfile = JSON.parse(localStorage.getItem('yofish_student')); } catch(e){}
+                    const myToken = (storedProfile && storedProfile.className === studentProfile.value.className && storedProfile.seat === studentProfile.value.seat && storedProfile.sessionToken)
+                                    ? storedProfile.sessionToken
+                                    : (Date.now().toString(36) + Math.random().toString(36).substring(2));
+                    
+                    studentProfile.value.sessionToken = myToken;
+
+                    // 驗證是否有人佔用該座號
+                    const seatRef = dbRef(db, `presence/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}`);
+                    const seatSnap = await get(seatRef);
+                    const existingData = seatSnap.val();
+
+                    if (existingData && (existingData.status === 'online' || existingData.status === 'away') && existingData.sessionToken !== myToken) {
+                        // 有其他人佔用！進入等待室
+                        isWaitingForLogin.value = true;
+                        await set(dbRef(db, `pendingLogins/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}`), {
+                            requestToken: myToken,
+                            time: Date.now()
+                        });
+
+                        // 監聽老師是否放行
+                        const tokenRef = dbRef(db, `presence/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}/sessionToken`);
+                        waitTokenListener = onValue(tokenRef, (tSnap) => {
+                            if (tSnap.val() === myToken) {
+                                isWaitingForLogin.value = false;
+                                if(waitTokenListener) off(tokenRef, 'value', waitTokenListener);
+                                finalizeJoin();
+                            }
+                        });
+
+                        // 監聽老師是否拒絕
+                        const rejectRef = dbRef(db, `pendingLogins/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}`);
+                        waitRejectListener = onValue(rejectRef, (rSnap) => {
+                            if (!rSnap.exists() && isWaitingForLogin.value) {
+                                get(tokenRef).then(t2Snap => {
+                                    if (t2Snap.val() !== myToken) {
+                                        isWaitingForLogin.value = false;
+                                        triggerToast('老師拒絕了您的登入請求', 'error');
+                                        playSound('error');
+                                        if(waitRejectListener) off(rejectRef, 'value', waitRejectListener);
+                                        if(waitTokenListener) off(tokenRef, 'value', waitTokenListener);
+                                    }
+                                });
+                            }
+                        });
+                        return; // 中斷常規登入流程
+                    } else {
+                        finalizeJoin();
+                    }
+                } catch(e) {}
+            } else {
+                finalizeJoin(); // fallback
+            }
+          };
+
+          const finalizeJoin = () => {
+            localStorage.setItem('yofish_student', JSON.stringify(studentProfile.value));
+            hasJoined.value = true;
+            triggerToast(`歡迎進入課堂，${studentProfile.value.seat}號`, 'success');
+            playSound('pop');
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+            initPresence();
+            requestWakeLock();
+            checkSplitScreen();
+          };
+
+          const cancelPendingLogin = () => {
+              isWaitingForLogin.value = false;
+              if (db) set(dbRef(db, `pendingLogins/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}`), null);
+              if (waitTokenListener) off(dbRef(db, `presence/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}/sessionToken`), 'value', waitTokenListener);
+              if (waitRejectListener) off(dbRef(db, `pendingLogins/${safeKey(studentProfile.value.className)}/${safeKey(studentProfile.value.seat)}`), 'value', waitRejectListener);
+          };
+
+          const leaveClass = () => {
+            localStorage.removeItem('yofish_student');
+            if (presenceRef && db) set(presenceRef, null);
+            hasJoined.value = false;
+            localMyScore.value = null;
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            releaseWakeLock();
+          };
+
+          // ===== 監控與換班 =====
+          watch(currentSession, (newVal) => {
+            if (!isTeacher.value || !newVal) return;
+            const m = newVal.match(/^\[(.*?)\]\[(.*?)\]/);
+            if (m) {
+              activeClassName.value = m[1];
+              expandedFolders.value.add(m[1]);
+              expandedCourses.value.add(`${m[1]}-${m[2]}`);
+            } else {
+              activeClassName.value = '';
+            }
+            nextTick(() => {
+                const el = document.getElementById(`nav-${safeKey(newVal)}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+          });
+
+          watch(activeClassName, (newClass, oldClass) => {
+            if (!db) return;
+            if (oldClass) {
+              if(presenceListenerPath) off(dbRef(db, presenceListenerPath));
+              if(scoreListenerPath) off(dbRef(db, scoreListenerPath));
+              if(headsUpListener) off(dbRef(db, headsUpListener));
+              if(locksListener) off(dbRef(db, locksListener));
+              if(pendingListenerPath) off(dbRef(db, pendingListenerPath));
+              if(distractionLogsPath) off(dbRef(db, distractionLogsPath));
+            }
+
+            if (newClass) {
+              distractedStudents.value = [];
+              hasNewDistractions.value = false;
+              onlineSeats.value = [];
+              studentScores.value = {};
+              isHeadsUp.value = false;
+              studentLocks.value = {};
+              distractionLogs.value = {};
+              pendingLogins.value = {};
+
+              get(dbRef(db, `global/classSizes/${safeKey(newClass)}`)).then(snap => {
+                if (snap.exists()) currentClassSize.value = snap.val();
+              });
+
+              headsUpListener = `global/headsUp/${safeKey(newClass)}`;
+              onValue(dbRef(db, headsUpListener), snap => isHeadsUp.value = !!snap.val());
+
+              locksListener = `locks/${safeKey(newClass)}`;
+              onValue(dbRef(db, locksListener), snap => studentLocks.value = snap.val() || {});
+
+              if(isTeacher.value) {
+                  // 1. 監聽在線狀態 (只用來顯示紅字或斷線名單，計分交給雙軌)
+                  presenceListenerPath = `presence/${safeKey(newClass)}`;
+                  onValue(dbRef(db, presenceListenerPath), (snap) => {
+                    const data = snap.val() || {};
+                    const currentDistracted = Object.keys(data)
+                      .filter(k => data[k].status === 'away' || data[k].status === 'offline')
+                      .map(decodeKey).sort();
+                    
+                    const newDists = currentDistracted.filter(seat => !distractedStudents.value.includes(seat));
+                    if (newDists.length > 0 && !showDistractedModal.value) hasNewDistractions.value = true;
+                    
+                    distractedStudents.value = currentDistracted;
+                    onlineSeats.value = Object.keys(data)
+                      .filter(k => data[k].status === 'online' || data[k].status === 'away')
+                      .map(decodeKey).sort();
+                  });
+
+                  // 2. 監聽分心次數與秒數 (雙軌計分)
+                  distractionLogsPath = `distractionLogs/${safeKey(newClass)}`;
+                  onValue(dbRef(db, distractionLogsPath), snap => {
+                      distractionLogs.value = snap.val() || {};
+                  });
+
+                  // 3. 監聽等待室請求
+                  pendingListenerPath = `pendingLogins/${safeKey(newClass)}`;
+                  onValue(dbRef(db, pendingListenerPath), snap => {
+                      pendingLogins.value = snap.val() || {};
+                  });
+
+                  scoreListenerPath = `scores/${safeKey(newClass)}`;
+                  onValue(dbRef(db, scoreListenerPath), snap => studentScores.value = snap.val() || {});
+              }
+            }
+          });
+
+          // 教師審核方法
+          const rejectLogin = (seat) => {
+              if(db && activeClassName.value) set(dbRef(db, `pendingLogins/${safeKey(activeClassName.value)}/${seat}`), null);
+          };
+          const approveLogin = async (seat, requestToken) => {
+              if(db && activeClassName.value) {
+                  await set(dbRef(db, `presence/${safeKey(activeClassName.value)}/${seat}/sessionToken`), requestToken);
+                  await set(dbRef(db, `pendingLogins/${safeKey(activeClassName.value)}/${seat}`), null);
+              }
+          };
+
+          const initPresence = () => {
+            if (isTeacher.value || !hasJoined.value || !db) return;
+
+            const safeClassName = safeKey(studentProfile.value.className);
+            const safeSeat = safeKey(studentProfile.value.seat);
+            const myToken = studentProfile.value.sessionToken;
+
+            presenceRef = dbRef(db, `presence/${safeClassName}/${safeSeat}`);
+            const isOffline = { status: 'offline', time: serverTimestamp(), sessionToken: myToken };
+            const isOnline = { status: 'online', time: serverTimestamp(), sessionToken: myToken };
+            const isAway = { status: 'away', time: serverTimestamp(), sessionToken: myToken };
+            
+            onValue(dbRef(db, '.info/connected'), (snap) => {
+              if (snap.val() === false) return;
+              onDisconnect(presenceRef).set(isOffline).then(() => set(presenceRef, isOnline));
+            });
+
+            // Token 防護：被頂號強制登出
+            onValue(dbRef(db, `presence/${safeClassName}/${safeSeat}/sessionToken`), (snap) => {
+                const dbToken = snap.val();
+                if (dbToken && dbToken !== myToken) {
+                    triggerToast('⚠️ 您的帳號已在其他裝置登入，或被老師強制替換', 'error');
+                    leaveClass();
+                }
+            });
+
+            // 分心雙軌計分邏輯 (學生端紀錄並推播)
+            let lastBlur = null;
+            const logDistraction = (ms) => {
+                const distRef = dbRef(db, `distractionLogs/${safeClassName}/${safeSeat}`);
+                runTransaction(distRef, cur => {
+                    if (!cur) return { count: 1, totalMs: ms };
+                    return { count: (cur.count || 0) + 1, totalMs: (cur.totalMs || 0) + ms };
+                });
+            };
+
+            document.addEventListener('visibilitychange', () => {
+              if (!hasJoined.value || isTeacher.value) return;
+              if (document.visibilityState === 'hidden') {
+                  lastBlur = Date.now();
+                  set(presenceRef, isAway);
+              } else {
+                  requestWakeLock();
+                  triggerSilentPulse(); // 切回視窗發送脈衝擊落背景影片
+                  set(presenceRef, isOnline);
+                  if (lastBlur) {
+                      const dist = Date.now() - lastBlur;
+                      if (dist > 3000) logDistraction(dist); // 大於3秒才懲罰
+                      lastBlur = null;
+                  }
+              }
+            });
+
+            window.addEventListener('blur', () => {
+              if (!hasJoined.value || isTeacher.value) return;
+              if (!lastBlur) lastBlur = Date.now();
+              set(presenceRef, isAway);
+            });
+
+            window.addEventListener('focus', () => {
+              if (!hasJoined.value || isTeacher.value) return;
+              triggerSilentPulse();
+              set(presenceRef, isOnline);
+              if (lastBlur) {
+                  const dist = Date.now() - lastBlur;
+                  if (dist > 3000) logDistraction(dist);
+                  lastBlur = null;
+              }
+            });
+
+            // 全局點擊防護網 (附帶節流，防佔用系統焦點)
+            document.addEventListener('click', () => { if (hasJoined.value && !isTeacher.value) triggerSilentPulse(); });
+            document.addEventListener('touchstart', () => { if (hasJoined.value && !isTeacher.value) triggerSilentPulse(); }, {passive: true});
+
+            onValue(dbRef(db, `global/headsUp/${safeClassName}`), snap => isHeadsUp.value = !!snap.val());
+            onValue(dbRef(db, `locks/${safeClassName}`), snap => studentLocks.value = snap.val() || {});
+
+            onValue(dbRef(db, `global/forceLogout/${safeClassName}`), (snap) => {
+                if(snap.val() && hasJoined.value) {
+                    triggerToast('老師已鎖定教室並強制登出', 'error');
+                    leaveClass();
+                }
+            });
+
+            localMyScore.value = null;
+            onValue(dbRef(db, `scores/${safeClassName}/${safeSeat}`), (snap) => {
+                const newScore = snap.val() || 0;
+                if (localMyScore.value !== null) {
+                    if (newScore > localMyScore.value) {
+                        scorePopupDelta.value = newScore - localMyScore.value; scorePopupType.value = 'increase'; showScorePopup.value = true; playSound('success'); setTimeout(() => showScorePopup.value = false, 2500);
+                    } else if (newScore < localMyScore.value) {
+                        scorePopupDelta.value = localMyScore.value - newScore; scorePopupType.value = 'decrease'; showScorePopup.value = true; playSound('error'); setTimeout(() => showScorePopup.value = false, 2500);
+                    }
+                }
+                localMyScore.value = newScore;
+            });
+          };
+
+          const isIndividuallyLocked = computed(() => {
+              if (isTeacher.value || !hasJoined.value) return false;
+              return !!studentLocks.value[studentProfile.value.seat];
+          });
+
+          const toggleStudentLock = (seat) => {
+              if(!isTeacher.value || !activeClassName.value || !db) return;
+              const currentStatus = !!studentLocks.value[seat];
+              set(dbRef(db, `locks/${safeKey(activeClassName.value)}/${safeKey(seat)}`), !currentStatus);
+              playSound('pop');
+          };
+
+          const toggleHeadsUpMode = () => {
+              if(!isTeacher.value || !activeClassName.value || !db) return;
+              set(dbRef(db, `global/headsUp/${safeKey(activeClassName.value)}`), !isHeadsUp.value);
+              playSound('notify');
+          };
+
+          const absentSeats = computed(() => {
+            const allSeats = Array.from({length: currentClassSize.value}, (_, i) => (i + 1).toString().padStart(2, '0'));
+            return allSeats.filter(seat => !onlineSeats.value.includes(seat));
+          });
+          
+          const saveClassSize = () => {
+            if (activeClassName.value && db) set(dbRef(db, `global/classSizes/${safeKey(activeClassName.value)}`), currentClassSize.value);
+          };
+
+          const forceResetAttendance = () => {
+              if(!db) return;
+              showConfirm('確定要強制重置全班連線狀態嗎？(目前在線的學生需重新整理頁面)', async () => {
+                  if(activeClassName.value) {
+                      await set(dbRef(db, `presence/${safeKey(activeClassName.value)}`), null);
+                      await set(dbRef(db, `distractionLogs/${safeKey(activeClassName.value)}`), null);
+                      hasNewDistractions.value = false;
+                      triggerToast('點名表已重置', 'success');
+                  }
+              });
+          };
+
+          // 結算分心紀錄 (套用雙軌公式)
+          const resetDistractedHistory = () => {
+              if (Object.keys(distractionLogs.value).length === 0) return;
+              
+              showConfirm('即將結算分心紀錄。\n公式：每次扣1分，每滿30秒扣1分。確定執行並自動扣分？', () => {
+                  for (const seat in distractionLogs.value) {
+                      const data = distractionLogs.value[seat];
+                      const deduction = (data.count || 0) * 1 + Math.floor((data.totalMs || 0) / 30000) * 1;
+                      if(deduction > 0) updateScore(seat, -deduction, true); 
+                  }
+                  playSound('success');
+                  set(dbRef(db, `distractionLogs/${safeKey(activeClassName.value)}`), null);
+                  hasNewDistractions.value = false;
+                  triggerToast('紀錄已結算並完成扣分', 'success');
+              });
+          };
+          
+          const openDistractedModal = () => {
+              hasNewDistractions.value = false; 
+              showDistractedModal.value = true;
+          };
+
+          // ===== 無障礙字體 =====
+          const changeTextSize = (dir) => {
+            const sizes = ['normal', 'large', 'xlarge'];
+            let idx = sizes.indexOf(textSize.value);
+            if (dir === 'up' && idx < 2) textSize.value = sizes[idx + 1];
+            if (dir === 'down' && idx > 0) textSize.value = sizes[idx - 1];
+          };
+          const textSizeClass = computed(() => `text-size-${textSize.value}`);
+
+          // ===== 清空作答 =====
+          const clearSessionData = () => {
+            if (!currentSession.value || !db) return;
+            showConfirm('警告：確定要清空全班的作答紀錄嗎？(包含所有訂正軌跡，此動作無法復原)', () => {
+              set(dbRef(db, `sessionData/${safeKey(currentSession.value)}/data`), null);
+              set(dbRef(db, `sessionData/${safeKey(currentSession.value)}/likes`), null).then(() => triggerToast('作答紀錄已清空', 'success'));
+            });
+          };
+
+          // ===== 投票/評分詳情 =====
+          const openVoteDetail = (opt) => {
+            const list = wordsData.value.map(w => w.match(/^\[(.*?)\]\s*(.*)$/)).filter(m => m && m[2] === opt).map(m => m[1]).sort();
+            detailModalTitle.value = `選項「${opt}」作答名單`; detailModalList.value = list; showDetailModal.value = true;
+          };
+
+          const openRatingDetail = (group) => {
+            const list = wordsData.value.map(w => { const m = w.match(/^\[(.*?)\]\s*(.*)$/); if (!m) return null; const p = m[2].split(':'); return p[0] === group ? `${m[1]} (${p[1]}分)` : null; }).filter(Boolean).sort();
+            detailModalTitle.value = `向度「${group}」評分名單`; detailModalList.value = list; showDetailModal.value = true;
+          };
+
+          const toggleLike = (index) => {
+            if(!currentSession.value || !db) return;
+            const likeRef = dbRef(db, `sessionData/${safeKey(currentSession.value)}/likes/${index}`);
+            const currentLike = likedAnswersObj.value[index] || 0;
+            set(likeRef, !currentLike); playSound('pop');
+          };
+
+          // ===== 隨機抽籤與追問 =====
+          const triggerRandomPick = () => {
+             if(onlineSeats.value.length === 0 || !db) { triggerToast('目前無學生在線，無法抽籤', 'error'); return; }
+             const randIndex = Math.floor(Math.random() * onlineSeats.value.length);
+             const pickedSeat = onlineSeats.value[randIndex];
+             
+             set(dbRef(db, `sessionData/${safeKey(currentSession.value)}/randomPick`), { seat: pickedSeat, answer: '', timestamp: Date.now() });
+             playSound('notify'); triggerToast(`已抽中 ${pickedSeat} 號，等待回答...`, 'success');
+          };
+
+          const clearRandomPick = () => { if(db) set(dbRef(db, `sessionData/${safeKey(currentSession.value)}/randomPick`), null); };
+
+          const submitStudentRandomPick = async () => {
+             if(isIndividuallyLocked.value || isHeadsUp.value || isSplitScreen.value || !db) { triggerToast('你目前無法操作', 'error'); return; }
+             if(!studentRandomPickInput.value.trim()) return;
+             await update(dbRef(db, `sessionData/${safeKey(currentSession.value)}/randomPick`), { answer: studentRandomPickInput.value });
+             showStudentRandomPick.value = false; studentRandomPickInput.value = ''; isRandomPickFocused.value = false; 
+             playSound('success'); triggerToast('答案已送出！', 'success');
+          };
+
+          // ===== 計分表 =====
+          const updateScore = (seat, delta, silent = false) => {
+             if(!db) return;
+             const currentScore = studentScores.value[seat] || 0;
+             set(dbRef(db, `scores/${safeKey(activeClassName.value)}/${seat}`), currentScore + delta);
+             if(!silent) playSound('pop');
+          };
+
+          // ===== 熱區操作防誤觸 =====
+          const handleHeatmapTouchStart = () => { isScrollingHeatmap = false; };
+          const handleHeatmapTouchMove = () => { isScrollingHeatmap = true; };
+          const handleHeatmapClick = (idx) => {
+             if (isScrollingHeatmap) { isScrollingHeatmap = false; return; }
+             toggleHeatmapSelection(idx);
+          };
+
+          const toggleHeatmapSelection = (idx, forceSelect = false) => {
+            const s = new Set(studentHeatmapSelection.value);
+            if (forceSelect) s.add(idx); else s.has(idx) ? s.delete(idx) : s.add(idx);
+            studentHeatmapSelection.value = s;
+          };
+
+          const openHeatmapNoteInput = (idx, event) => {
+            heatmapNoteTargetIdx.value = idx;
+            const cx = event.clientX || (event.changedTouches ? event.changedTouches[0].clientX : window.innerWidth/2);
+            const cy = event.clientY || (event.changedTouches ? event.changedTouches[0].clientY : window.innerHeight/2);
+            heatmapNotePos.value = { x: Math.max(10, Math.min(cx - 30, window.innerWidth - 200)), y: Math.max(10, cy + 15) };
+            showHeatmapNoteTool.value = true;
+            heatmapNoteInput.value = (sessionConfig.value?.notes && sessionConfig.value.notes[idx]) || '';
+            nextTick(() => heatmapNoteInputRef.value?.focus());
+          };
+
+          const saveHeatmapNote = () => {
+            if (heatmapNoteTargetIdx.value !== -1 && sessionConfig.value && db) {
+              if (!sessionConfig.value.notes) sessionConfig.value.notes = {};
+              sessionConfig.value.notes[heatmapNoteTargetIdx.value] = heatmapNoteInput.value;
+              set(dbRef(db, `sessionData/${safeKey(currentSession.value)}/config/notes`), sessionConfig.value.notes);
+              triggerToast('註解已儲存', 'success');
+            }
+            showHeatmapNoteTool.value = false; heatmapNoteInput.value = '';
+          };
+
+          // ===== 核心資料庫連線 =====
+          const fetchSessions = () => {
+            if(!db) return;
+            isLoadingSessions.value = true;
+            onValue(dbRef(db, 'sessionList'), (snap) => {
+              const data = snap.val() || {};
+              sessions.value = Object.keys(data).map(decodeKey);
+              if (expandedFolders.value.size === 0) {
+                const groups = groupedSessions.value;
+                Object.keys(groups).forEach(f => {
+                  expandedFolders.value.add(f);
+                  Object.keys(groups[f]).forEach(c => expandedCourses.value.add(f + '-' + c));
+                });
+              }
+              isLoadingSessions.value = false;
+            });
+          };
+
+          const selectSession = (name) => {
+            if (!isTeacher.value && name !== activeSession.value) return;
+            if(currentSession.value !== name) {
+               inputWord.value = ''; studentSelectedVote.value = null; selectedRatingTarget.value = null; studentHeatmapSelection.value = new Set();
+            }
+            currentSession.value = name; sessionConfig.value = null; wordsData.value = []; likedAnswersObj.value = {};
+            if (isMobile.value) mobileView.value = 'detail';
+            fetchSessionData();
+          };
+
+          const fetchSessionData = () => {
+            const target = currentSession.value;
+            if (!target || !db) return;
+            
+            if (currentSessionListener) off(dbRef(db, currentSessionListener));
+            if (currentLikesListener) off(dbRef(db, currentLikesListener));
+            if (randomPickListener) off(dbRef(db, randomPickListener));
+
+            isSessionLoading.value = true;
+            currentSessionListener = `sessionData/${safeKey(target)}`;
+            onValue(dbRef(db, currentSessionListener), (snap) => {
+              if (currentSession.value !== target) return;
+              const sData = snap.val() || {};
+              const isDataChanged = JSON.stringify(wordsData.value) !== JSON.stringify(sData.data || []);
+              
+              if (sData.config && sData.config.allowMultiple === undefined) sData.config.allowMultiple = true;
+              sessionConfig.value = sData.config || null;
+              if (isDataChanged) wordsData.value = sData.data || [];
+              isSessionLoading.value = false;
+              if (sessionConfig.value?.type === 'wordcloud' && isDataChanged) nextTick(() => renderCloud(wordsData.value));
+            });
+
+            currentLikesListener = `sessionData/${safeKey(target)}/likes`;
+            onValue(dbRef(db, currentLikesListener), (snap) => likedAnswersObj.value = snap.val() || {});
+
+            randomPickListener = `sessionData/${safeKey(target)}/randomPick`;
+            onValue(dbRef(db, randomPickListener), (snap) => {
+               const data = snap.val();
+               teacherRandomPickData.value = data;
+               if(!isTeacher.value && hasJoined.value && data) {
+                  if(data.seat === studentProfile.value.seat && !data.answer) {
+                     showStudentRandomPick.value = true; playSound('notify');
+                  } else { showStudentRandomPick.value = false; isRandomPickFocused.value = false; }
+               }
+            });
+          };
+
+          const groupedSessions = computed(() => {
+            const groups = {};
+            sessions.value.forEach(name => {
+              const m = name.match(/^\[(.*?)\]\[(.*?)\]\s*(.*)$/);
+              if (m) {
+                if (!groups[m[1]]) groups[m[1]] = {};
+                if (!groups[m[1]][m[2]]) groups[m[1]][m[2]] = [];
+                groups[m[1]][m[2]].push({ fullName: name, shortName: m[3] });
+              }
+            });
+            return groups;
+          });
+          
+          const studentHasSubmittedCurrent = computed(() => studentHasSubmitted(studentProfile.value.seat));
+
+          const availableCourses = computed(() => {
+            if (!newProject.value || !groupedSessions.value[newProject.value]) return [];
+            return Object.keys(groupedSessions.value[newProject.value]);
+          });
+
+          const getTypeName = (t) => ({ wordcloud: '文字雲', vote: '投票', opentext: '簡答', rating: '評分', heatmap: '難詞偵測', translation: '協作翻譯' }[t] || t);
+
+          const setTypeAndScroll = (t) => {
+            newType.value = t;
+            if (['vote', 'rating', 'heatmap', 'translation'].includes(t)) {
+              nextTick(() => { if (createModalScrollRef.value) createModalScrollRef.value.scrollTo({ top: createModalScrollRef.value.scrollHeight, behavior: 'smooth' }); });
+            }
+          };
+
+          const openCreateModal = () => {
+            newProject.value = ''; newCourse.value = ''; newQuestion.value = '';
+            newType.value = 'wordcloud'; newOptions.value = ['', '']; newTextContent.value = '';
+            newAllowMultiple.value = true; useExistingFolder.value = true; useExistingCourse.value = true;
+            showCreateModal.value = true;
+          };
+
+          const createNewSession = async () => {
+            if (!newProject.value.trim()) { triggerToast('請選擇或輸入班級名稱', 'error'); return; }
+            if (!newCourse.value.trim()) { triggerToast('請選擇或輸入課程單元', 'error'); return; }
+            if (!newQuestion.value.trim()) { triggerToast('請輸入活動題目', 'error'); return; }
+            if (!db) return;
+
+            const originalQuestion = newQuestion.value.trim();
+            const shortQuestion = originalQuestion.length > 30 ? originalQuestion.substring(0, 30) + '...' : originalQuestion;
+            const finalName = `[${newProject.value.trim()}][${newCourse.value.trim()}] ${shortQuestion}`;
+            if (sessions.value.includes(finalName)) { triggerToast('此活動名稱已存在', 'error'); return; }
+
+            let config = { type: newType.value, options: [], allowMultiple: newAllowMultiple.value, fullQuestion: originalQuestion };
+            
+            if (newType.value === 'vote' || newType.value === 'rating') {
+              const opts = newOptions.value.filter(o => o.trim());
+              if (opts.length < 2) { triggerToast('請至少設定兩個選項', 'error'); return; }
+              config.options = opts;
+            } else if (newType.value === 'heatmap' || newType.value === 'translation') {
+              if (!newTextContent.value.trim()) { triggerToast('請輸入文本內容', 'error'); return; }
+              config.text = newTextContent.value.trim();
+            }
+
+            try {
+              const updates = {};
+              updates[`sessionList/${safeKey(finalName)}`] = true;
+              updates[`sessionData/${safeKey(finalName)}/config`] = config;
+              await update(dbRef(db), updates);
+              expandedFolders.value.add(newProject.value.trim()); expandedCourses.value.add(`${newProject.value.trim()}-${newCourse.value.trim()}`);
+              showCreateModal.value = false; triggerToast('活動建立成功！', 'success'); selectSession(finalName);
+            } catch (e) { triggerToast('建立失敗，請重試', 'error'); }
+          };
+
+          const openEditActivityModal = async (q) => {
+            if(!db) return;
+            const m = q.fullName.match(/^\[(.*?)\]\[(.*?)\]\s*(.*)$/);
+            if (!m) return;
+            editData.value = { originalName: q.fullName, folder: m[1], course: m[2], question: m[3], type: '', options: [], textContent: '', allowMultiple: true, notes: null };
+            isEditLoading.value = true; showEditActivityModal.value = true;
+            try {
+              const snap = await get(dbRef(db, `sessionData/${safeKey(q.fullName)}/config`));
+              const config = snap.val() || {};
+              editData.value.type = config.type || 'wordcloud';
+              editData.value.options = [...(config.options || [])];
+              editData.value.textContent = config.text || '';
+              editData.value.allowMultiple = config.allowMultiple !== undefined ? config.allowMultiple : true;
+              editData.value.notes = config.notes || null;
+              editData.value.question = config.fullQuestion || m[3];
+            } catch (e) { triggerToast('載入設定失敗', 'error'); }
+            isEditLoading.value = false;
+          };
+
+          const submitEditActivity = async () => {
+            if (!editData.value.folder || !editData.value.course || !editData.value.question) { triggerToast('請填寫所有欄位', 'error'); return; }
+            if(!db) return;
+            
+            const originalQuestion = editData.value.question.trim();
+            const shortQuestion = originalQuestion.length > 30 ? originalQuestion.substring(0, 30) + '...' : originalQuestion;
+            const newFullName = `[${editData.value.folder}][${editData.value.course}] ${shortQuestion}`;
+            const oldFullName = editData.value.originalName;
+
+            if (newFullName !== oldFullName && sessions.value.includes(newFullName)) { triggerToast('此活動名稱已存在，請更換名稱', 'error'); return; }
+
+            let newConfig = { type: editData.value.type, allowMultiple: editData.value.allowMultiple, fullQuestion: originalQuestion };
+            if (editData.value.type === 'vote' || editData.value.type === 'rating') newConfig.options = editData.value.options.filter(o => o.trim());
+            else if (editData.value.type === 'heatmap' || editData.value.type === 'translation') newConfig.text = editData.value.textContent;
+            if (editData.value.notes) newConfig.notes = editData.value.notes;
+
+            isEditLoading.value = true;
+            try {
+              if (newFullName !== oldFullName) {
+                const dataSnap = await get(dbRef(db, `sessionData/${safeKey(oldFullName)}/data`));
+                const likesSnap = await get(dbRef(db, `sessionData/${safeKey(oldFullName)}/likes`));
+                const updates = {};
+                updates[`sessionList/${safeKey(oldFullName)}`] = null; updates[`sessionList/${safeKey(newFullName)}`] = true;
+                updates[`sessionData/${safeKey(newFullName)}/config`] = newConfig;
+                if (dataSnap.val()) updates[`sessionData/${safeKey(newFullName)}/data`] = dataSnap.val();
+                if (likesSnap.val()) updates[`sessionData/${safeKey(newFullName)}/likes`] = likesSnap.val();
+                updates[`sessionData/${safeKey(oldFullName)}`] = null;
+                await update(dbRef(db), updates);
+                if (activeSession.value === oldFullName) await set(dbRef(db, 'global/activeSession'), newFullName);
+                if (currentSession.value === oldFullName) { currentSession.value = newFullName; fetchSessionData(); }
+              } else {
+                await set(dbRef(db, `sessionData/${safeKey(oldFullName)}/config`), newConfig);
+                if (currentSession.value === oldFullName) sessionConfig.value = newConfig;
+              }
+              showEditActivityModal.value = false; triggerToast('變更儲存成功！', 'success');
+            } catch (e) { triggerToast('儲存失敗，請重試', 'error'); }
+            isEditLoading.value = false;
+          };
+
+          const confirmDeleteActivity = (fullName) => {
+            const short = getSessionDisplayName(fullName).short;
+            showConfirm(`確定要刪除「${short}」嗎？此動作不可復原。`, async () => {
+              if (!db) return;
+              try {
+                const updates = {};
+                updates[`sessionList/${safeKey(fullName)}`] = null; updates[`sessionData/${safeKey(fullName)}`] = null;
+                await update(dbRef(db), updates);
+                if (currentSession.value === fullName) currentSession.value = '';
+                if (activeSession.value === fullName) await set(dbRef(db, 'global/activeSession'), null);
+                triggerToast('活動已刪除', 'success');
+              } catch (e) { triggerToast('刪除失敗', 'error'); }
+            });
+          };
+
+          const confirmDeleteCourse = (folder, course) => {
+            const activities = groupedSessions.value[folder]?.[course] || [];
+            showConfirm(`確定要刪除「${course}」下的全部 ${activities.length} 個活動嗎？`, async () => {
+              if (!db) return;
+              try {
+                const updates = {};
+                activities.forEach(act => { updates[`sessionList/${safeKey(act.fullName)}`] = null; updates[`sessionData/${safeKey(act.fullName)}`] = null; if (currentSession.value === act.fullName) currentSession.value = ''; });
+                await update(dbRef(db), updates);
+                if (activities.some(a => a.fullName === activeSession.value)) await set(dbRef(db, 'global/activeSession'), null);
+                triggerToast('課程已刪除', 'success');
+              } catch (e) { triggerToast('刪除失敗', 'error'); }
+            });
+          };
+
+          const confirmDeleteProject = (folder) => {
+            const courses = groupedSessions.value[folder] || {};
+            const allActivities = Object.values(courses).flat();
+            showConfirm(`警告：確定刪除班級「${folder}」的全部 ${allActivities.length} 個活動嗎？`, async () => {
+              if (!db) return;
+              try {
+                const updates = {};
+                allActivities.forEach(act => { updates[`sessionList/${safeKey(act.fullName)}`] = null; updates[`sessionData/${safeKey(act.fullName)}`] = null; if (currentSession.value === act.fullName) currentSession.value = ''; });
+                await update(dbRef(db), updates);
+                if (allActivities.some(a => a.fullName === activeSession.value)) await set(dbRef(db, 'global/activeSession'), null);
+                triggerToast('班級已刪除', 'success');
+              } catch (e) { triggerToast('刪除失敗', 'error'); }
+            });
+          };
+
+          const startEditingFolder = (folder) => {
+            oldFolderName.value = folder; tempFolderName.value = folder; showEditFolderModal.value = true;
+          };
+
+          const submitRenameFolder = async () => {
+            const newName = tempFolderName.value.trim();
+            if (!newName || newName === oldFolderName.value || !db) { showEditFolderModal.value = false; return; }
+            const courses = groupedSessions.value[oldFolderName.value];
+            if (!courses) { showEditFolderModal.value = false; return; }
+
+            const activities = Object.values(courses).flat();
+            isEditLoading.value = true;
+            try {
+              for (const act of activities) {
+                const m = act.fullName.match(/^\[(.*?)\]\[(.*?)\]\s*(.*)$/);
+                if (!m) continue;
+                const newFullName = `[${newName}][${m[2]}] ${m[3]}`;
+                const snapData = await get(dbRef(db, `sessionData/${safeKey(act.fullName)}`));
+                const updates = {};
+                updates[`sessionList/${safeKey(act.fullName)}`] = null; updates[`sessionList/${safeKey(newFullName)}`] = true;
+                if(snapData.val()) updates[`sessionData/${safeKey(newFullName)}`] = snapData.val();
+                updates[`sessionData/${safeKey(act.fullName)}`] = null;
+                await update(dbRef(db), updates);
+                if (activeSession.value === act.fullName) await set(dbRef(db, 'global/activeSession'), newFullName);
+                if (currentSession.value === act.fullName) { currentSession.value = newFullName; fetchSessionData(); }
+              }
+              showEditFolderModal.value = false; triggerToast('班級更名成功', 'success');
+            } catch (e) { triggerToast('更名失敗，請重試', 'error'); }
+            isEditLoading.value = false;
+          };
+          
+          const collapseAllFolders = () => { expandedFolders.value.clear(); expandedCourses.value.clear(); };
+
+          // ===== 提交作答 =====
+          const submitWord = (val) => {
+            if(isIndividuallyLocked.value || isHeadsUp.value || isSplitScreen.value) { triggerToast('你目前無法操作', 'error'); return; }
+            const v = val || inputWord.value;
+            if (!v || !v.trim() || !db) return;
+            const type = sessionConfig.value?.type;
+            if (type === 'vote') studentSelectedVote.value = v;
+            isSubmitting.value = true;
+            const payload = `[${studentProfile.value.seat}] ${v}`;
+            
+            runTransaction(dbRef(db, `sessionData/${safeKey(currentSession.value)}/data`), (cur) => {
+              if (!cur) return [payload];
+              if (!sessionConfig.value.allowMultiple && cur.some(w => w.startsWith(`[${studentProfile.value.seat}] `))) return; 
+              if (sessionConfig.value.allowMultiple) {
+                 const newCur = cur.filter(w => !w.startsWith(`[${studentProfile.value.seat}] `));
+                 newCur.push(payload); 
+                 return newCur;
+              }
+              cur.push(payload); 
+              return cur;
+            }).then(() => {
+              isSubmitting.value = false; inputWord.value = ''; showStamp.value = true; playSound('success');
+              setTimeout(() => showStamp.value = false, 2000);
+            });
+          };
+
+          const submitRating = () => {
+            if(isIndividuallyLocked.value || isHeadsUp.value || isSplitScreen.value || !db) { triggerToast('你目前無法操作', 'error'); return; }
+            const score = `${selectedRatingTarget.value}:${tempRating.value}`;
+            const payload = `[${studentProfile.value.seat}] ${score}`;
+            isSubmitting.value = true;
+            
+            runTransaction(dbRef(db, `sessionData/${safeKey(currentSession.value)}/data`), (cur) => {
+              if (!cur) return [payload];
+              const prefix = `[${studentProfile.value.seat}] ${selectedRatingTarget.value}:`;
+              if (!sessionConfig.value.allowMultiple && cur.some(w => w.startsWith(prefix))) return;
+              const newCur = cur.filter(w => !w.startsWith(prefix));
+              newCur.push(payload); 
+              return newCur;
+            }).then(() => {
+              isSubmitting.value = false; localStorage.setItem(`r_${currentSession.value}_${selectedRatingTarget.value}`, '1');
+              selectedRatingTarget.value = null; showStamp.value = true; playSound('success');
+              setTimeout(() => showStamp.value = false, 2000);
+            });
+          };
+
+          const submitHeatmap = () => {
+            if(isIndividuallyLocked.value || isHeadsUp.value || isSplitScreen.value || !db) { triggerToast('你目前無法操作', 'error'); return; }
+            if (studentHeatmapSelection.value.size === 0) return;
+            isSubmitting.value = true;
+            const payload = `[${studentProfile.value.seat}] ${JSON.stringify(Array.from(studentHeatmapSelection.value))}`;
+            
+            runTransaction(dbRef(db, `sessionData/${safeKey(currentSession.value)}/data`), (cur) => {
+              if (!cur) return [payload];
+              if (!sessionConfig.value.allowMultiple && cur.some(w => w.startsWith(`[${studentProfile.value.seat}] `))) return;
+              const newCur = cur.filter(w => !w.startsWith(`[${studentProfile.value.seat}] `));
+              newCur.push(payload); 
+              return newCur;
+            }).then(() => {
+              isSubmitting.value = false; showStamp.value = true; playSound('success');
+              setTimeout(() => showStamp.value = false, 2000);
+            });
+          };
+
+          // ===== 渲染文字雲 =====
+          const renderCloud = (words) => {
+            const c = document.getElementById('word-cloud');
+            if (!c || !words.length) { d3.select("#word-cloud").selectAll("svg").remove(); return; }
+            if (c.clientWidth === 0 || c.clientHeight === 0) { setTimeout(() => renderCloud(words), 300); return; }
+            const freq = {};
+            words.forEach(w => { const clean = w.replace(/^\[.*?\]\s*/, ''); freq[clean] = (freq[clean] || 0) + 1; });
+            const data = Object.entries(freq).map(([t, v]) => ({ text: t, size: 24 + v * 12 })).sort((a, b) => b.size - a.size);
+            const colorScale = () => `hsl(${Math.floor(Math.random() * 360)}, 75%, 45%)`; 
+            
+            try {
+              d3.layout.cloud().size([c.clientWidth, c.clientHeight]).words(data).padding(15).rotate(0).font("Noto Serif TC").fontSize(d => d.size).spiral('archimedean').on("end", ws => {
+                let svg = d3.select("#word-cloud").select("svg");
+                if (svg.empty()) { svg = d3.select("#word-cloud").append("svg").attr("width", c.clientWidth).attr("height", c.clientHeight); svg.append("g").attr("transform", `translate(${c.clientWidth/2},${c.clientHeight/2})`); }
+                else { svg.attr("width", c.clientWidth).attr("height", c.clientHeight); svg.select("g").attr("transform", `translate(${c.clientWidth/2},${c.clientHeight/2})`); }
+                const g = svg.select("g"); const t = g.selectAll("text").data(ws, d => d.text);
+                t.transition().duration(800).style("font-size", d => d.size + "px").attr("transform", d => `translate(${[d.x, d.y]})`);
+                t.enter().append("text").style("font-size", d => d.size + "px").style("font-family", "Noto Serif TC").style("font-weight", "900").style("fill", () => colorScale()).attr("text-anchor", "middle").attr("transform", d => `translate(${[d.x, d.y]})`).text(d => d.text).style("opacity", 0).transition().duration(800).style("opacity", 1);
+                t.exit().transition().duration(400).style("opacity", 0).remove();
+              }).start();
+            } catch (e) {}
+          };
+
+          // ===== Zoom & Correction =====
+          const zoomAnswer = (t, i = -1, seat = '') => { zoomedAnswer.value = t; zoomedAnswerHTML.value = t; zoomedAnswerIndex.value = i; zoomedAnswerSeat.value = seat; showCorrectionTool.value = false; };
+
+          const checkSelection = (e) => {
+            const s = window.getSelection();
+            if (s.toString().trim().length > 0) {
+              const r = s.getRangeAt(0); selectionRange.value = r; showCorrectionTool.value = true;
+              const cx = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : window.innerWidth/2);
+              const cy = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : window.innerHeight/2);
+              correctionPos.value = { x: Math.max(10, Math.min(cx - 30, window.innerWidth - 200)), y: Math.max(10, cy + 15) };
+              correctionInput.value = '';
+              nextTick(() => correctionInputRef.value?.focus());
+            } else { showCorrectionTool.value = false; }
+          };
+
+          const applyCorrection = () => {
+            if (!selectionRange.value || !correctionInput.value.trim() || !db) return;
+            const es = document.createElement("del"); 
+            es.className = "text-slate-400 mx-1 line-through decoration-red-500 decoration-2"; 
+            es.textContent = selectionRange.value.toString();
+            
+            const cs = document.createElement("ins"); 
+            cs.className = "text-green-600 font-black mx-1 no-underline border-b-2 border-green-500 bg-green-50"; 
+            cs.textContent = correctionInput.value;
+            
+            selectionRange.value.deleteContents(); 
+            selectionRange.value.insertNode(cs); 
+            selectionRange.value.insertNode(es);
+            
+            const container = document.querySelector('.focus-text');
+            if (container) {
+              const html = container.innerHTML; zoomedAnswerHTML.value = html;
+              if (zoomedAnswerIndex.value !== -1) {
+                  const finalHtml = `[${zoomedAnswerSeat.value}] ${html}`;
+                  set(dbRef(db, `sessionData/${safeKey(currentSession.value)}/data/${zoomedAnswerIndex.value}`), finalHtml);
+              }
+            }
+            showCorrectionTool.value = false; window.getSelection().removeAllRanges();
+            playSound('pop');
+          };
+
+          const handleResize = debounce(() => {
+              windowWidth.value = window.innerWidth;
+              checkSplitScreen();
+              if (currentSession.value && sessionConfig.value?.type === 'wordcloud') renderCloud(wordsData.value);
+          }, 250);
+
+          onMounted(() => {
+            currentUrl.value = window.location.href.split('?')[0];
+
+            if(db) {
+                onValue(dbRef(db, '.info/connected'), (snap) => { isConnected.value = snap.val(); });
+                fetchSessions();
+                
+                onValue(dbRef(db, 'global/classOpen'), (snap) => {
+                    classOpenStates.value = snap.val() || {};
+                });
+
+                onValue(dbRef(db, 'global/activeSession'), (snap) => {
+                  const active = snap.val();
+                  activeSession.value = active;
+                  
+                  if (!isTeacher.value) {
+                    if (active) {
+                       const m = active.match(/^\[(.*?)\]/);
+                       if (m && hasJoined.value) {
+                          if (m[1] !== studentProfile.value.className) {
+                             triggerToast(`教師已切換至 ${m[1]} 進行活動，您已自動登出`, 'error');
+                             leaveClass(); return;
+                          }
+                       }
+                       if (currentSession.value !== active) selectSession(active);
+                    } else {
+                       currentSession.value = '';
+                       sessionConfig.value = null;
+                       showStudentRandomPick.value = false;
+                       inputWord.value = '';
+                    }
+                  }
+                });
+            }
+
+            const stored = localStorage.getItem('yofish_student');
+            if (stored) { studentProfile.value = JSON.parse(stored); hasJoined.value = true; initPresence(); requestWakeLock(); checkSplitScreen(); }
+
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('mousedown', (e) => {
+              if (showCorrectionTool.value && !e.target.closest('[data-correction-tool]')) showCorrectionTool.value = false;
+              if (showHeatmapNoteTool.value && !e.target.closest('.teacher-heatmap-char') && !e.target.closest('[data-heatmap-tool]')) showHeatmapNoteTool.value = false;
+            });
+          });
+
+          const sortedWordsList = computed(() => wordsData.value.map((txt, index) => {
+            const m = txt.match(/^\[(.*?)\]\s*(.*)$/);
+            const isLikedState = !!likedAnswersObj.value[index];
+            const realSeat = m ? m[1] : '?';
+            
+            return { 
+                txt, 
+                seatNum: realSeat, 
+                rawSeatNum: realSeat, 
+                cleanTxt: m ? m[2] : txt, 
+                index, 
+                isLiked: isLikedState 
+            };
+          }).reverse().sort((a, b) => { if (a.isLiked && !b.isLiked) return -1; if (!a.isLiked && b.isLiked) return 1; return 0; }));
+
+          const uniqueSubmittersCount = computed(() => {
+            const seats = new Set();
+            const ratingCounts = {};
+            const isRating = sessionConfig.value?.type === 'rating';
+            const totalOptions = sessionConfig.value?.options?.length || 0;
+
+            wordsData.value.forEach(w => {
+              const m = w.match(/^\[(.*?)\]\s/);
+              if (m) {
+                const seat = m[1];
+                if (isRating) {
+                    ratingCounts[seat] = (ratingCounts[seat] || 0) + 1;
+                    if (ratingCounts[seat] >= totalOptions) {
+                        seats.add(seat);
+                    }
+                } else {
+                    seats.add(seat);
+                }
+              }
+            });
+            return seats.size;
+          });
+
+          const heatmapStats = computed(() => {
+            const stats = {}; let maxCount = 0;
+            wordsData.value.forEach(entry => {
+              try {
+                const cleanEntry = entry.replace(/^\[.*?\]\s*/, '');
+                const indices = JSON.parse(cleanEntry);
+                if (Array.isArray(indices)) { 
+                  indices.forEach(idx => { 
+                      stats[idx] = (stats[idx] || 0) + 1; 
+                      if (stats[idx] > maxCount) maxCount = stats[idx]; 
+                  }); 
+                }
+              } catch (e) {}
+            });
+            return { counts: stats, max: maxCount }; 
+          });
+
+          const voteStats = computed(() => {
+            const s = {}; sessionConfig.value?.options?.forEach(o => s[o] = 0);
+            wordsData.value.forEach(w => { const clean = w.replace(/^\[.*?\]\s*/, ''); if (s[clean] !== undefined) s[clean]++; }); return s;
+          });
+
+          const ratingGroupStats = computed(() => {
+            const s = {}; sessionConfig.value?.options?.forEach(g => s[g] = { count: 0, sum: 0, average: 0 });
+            wordsData.value.forEach(raw => { const clean = raw.replace(/^\[.*?\]\s*/, ''); const p = clean.split(':'); if (s[p[0]]) { s[p[0]].count++; s[p[0]].sum += parseInt(p[1]); } });
+            Object.keys(s).forEach(k => { if (s[k].count) s[k].average = (s[k].sum / s[k].count).toFixed(1); }); return s;
+          });
+
+          return {
+            isTeacher, isFullScreen, showAuthModal, passwordInput, hasJoined, studentProfile, dynamicSeatLimit, isConnected,
+            availableClassesForStudent, joinClass, leaveClass, textSizeClass, changeTextSize,
+            confirmModal, executeConfirm,
+            sessions, currentSession, activeSession, isLoadingSessions, isSessionLoading, groupedSessions,
+            wordsData, sessionConfig, inputWord, isSubmitting, tempRating, selectedRatingTarget,
+            studentSelectedVote, studentHeatmapSelection, showStamp, isDraggingHeatmap, studentHasSubmittedCurrent, currentStudentRatedCount,
+            expandedFolders, expandedCourses, collapseAllFolders,
+            toggleFolder: (f) => { expandedFolders.value.has(f) ? expandedFolders.value.delete(f) : expandedFolders.value.add(f); },
+            toggleCourse: (c) => { expandedCourses.value.has(c) ? expandedCourses.value.delete(c) : expandedCourses.value.add(c); },
+            isMobile, mobileView, backToList: () => mobileView.value = 'list',
+            submitWord, submitRating, submitHeatmap,
+            checkPassword: () => {
+              initAudio(); 
+              if (passwordInput.value === '5097') { isTeacher.value = true; showAuthModal.value = false; triggerToast('登入成功', 'success'); playSound('success'); }
+              else { triggerToast('密碼錯誤', 'error'); playSound('error'); }
+            },
+            getSessionDisplayName,
+            hasRated: (t) => {
+               if(!wordsData.value || !studentProfile.value.seat) return false;
+               const prefix = `[${studentProfile.value.seat}] ${t}:`;
+               return wordsData.value.some(w => w.startsWith(prefix));
+            },
+            selectRatingTarget: (t) => { selectedRatingTarget.value = t; tempRating.value = 0; },
+            getSessionText: (c) => c ? (c.text || (c.options?.length > 0 ? c.options[0] : '')) : '',
+            getTypeName, safeKey, formatSeconds,
+            sortedWordsList, heatmapStats, voteStats, ratingGroupStats, uniqueSubmittersCount,
+            getHeatmapCount: (idx) => heatmapStats.value.counts[idx] || 0,
+            getHeatmapPercent: (idx) => {
+               const denom = uniqueSubmittersCount.value || 1;
+               return Math.round(((heatmapStats.value.counts[idx] || 0) / denom) * 100);
+            },
+            getHeatmapStyle: (idx) => {
+              const r = (heatmapStats.value.counts[idx] || 0) / (heatmapStats.value.max || 1);
+              if (r === 0 || (heatmapFilterLevel.value === 'medium' && r < 0.3) || (heatmapFilterLevel.value === 'high' && r < 0.6)) return {};
+              return { backgroundColor: r < 0.25 ? `rgba(254,243,199,${r*2+0.2})` : r < 0.5 ? `rgba(253,186,116,${r+0.2})` : r < 0.75 ? `rgba(239,68,68,${r})` : `rgba(185,28,28,${r})`, color: r < 0.5 ? '#1e293b' : '#fff', fontWeight: r > 0.3 ? 'bold' : 'normal', borderRadius: '4px' };
+            },
+            heatmapFilterLevel, toggleLike, handleHeatmapTouchStart, handleHeatmapTouchMove, handleHeatmapClick, toggleHeatmapSelection,
+            openHeatmapNoteInput, saveHeatmapNote, showHeatmapNoteTool, heatmapNoteInput, heatmapNoteInputRef, heatmapNotePos,
+            zoomedAnswer, zoomedAnswerHTML, zoomAnswer, zoomedAnswerSeat,
+            showCorrectionTool, correctionPos, correctionInput, correctionInputRef, checkSelection, applyCorrection,
+            showDetailModal, detailModalTitle, detailModalList, openVoteDetail, openRatingDetail,
+            
+            // 審核與監控
+            isWaitingForLogin, showPendingModal, pendingLogins, pendingLoginsCount, rejectLogin, approveLogin, cancelPendingLogin,
+            showDistractedModal, openDistractedModal, distractedStudents, distractedHistoryArray, clearSessionData, showAttendanceModal, onlineSeats, currentClassSize, absentSeats, saveClassSize, resetDistractedHistory, forceResetAttendance, hasNewDistractions, activeClassName,
+            isClassOpen, toggleClassDoor, isSplitScreen,
+            toggleActiveSession: (name) => { if(db) set(dbRef(db, 'global/activeSession'), activeSession.value === name ? null : name) },
+            selectSession,
+            showQR, currentUrl,
+            triggerRandomPick, clearRandomPick, teacherRandomPickData, showStudentRandomPick, studentRandomPickInput, submitStudentRandomPick, isRandomPickFocused,
+            showScoreModal, studentScores, updateScore, showScorePopup, scorePopupDelta, scorePopupType, exportScoresToCSV,
+            showUnsubmittedModal, unsubmittedSeats, isHeadsUp, toggleHeadsUpMode, isIndividuallyLocked, toggleStudentLock,
+            isStudentLocked: (seat) => !!studentLocks.value[seat],
+            
+            // CRUD
+            showCreateModal, openCreateModal, showEditActivityModal, showEditFolderModal,
+            newProject, newCourse, newQuestion, newType, newOptions, newTextContent, newAllowMultiple,
+            useExistingFolder, useExistingCourse, availableCourses, createModalScrollRef,
+            setTypeAndScroll, createNewSession,
+            editData, isEditLoading, openEditActivityModal, submitEditActivity,
+            startEditingFolder, tempFolderName, oldFolderName, submitRenameFolder,
+            confirmDeleteActivity, confirmDeleteCourse, confirmDeleteProject,
+            toasts,
+          };
+        }
+      }).mount('#app');
+    </script>
+  </body>
+</html>
